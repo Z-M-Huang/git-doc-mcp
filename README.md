@@ -191,6 +191,44 @@ prompts:                       # Optional - prompt templates
     args:
       - name: path
         required: true
+    messages:                    # Optional - MCP PromptMessage[]
+      - role: user
+        content:
+          type: resource
+          resource:
+            uri: "https://example.com/{{path}}"
+            mimeType: text/plain
+      - role: user
+        content:
+          type: text
+          text: "Explain the code above from {{path}}"
+```
+
+### Prompt Messages
+
+Prompts support the full MCP `PromptMessage` format with multi-message templates:
+
+- **Without `messages`**: A single user message is built from `description` + args (simple mode)
+- **With `messages`**: Messages are returned directly with `{{argName}}` substitution
+
+Each message has a `role` (`user` or `assistant`) and `content` (either `text` or embedded `resource`):
+
+```yaml
+messages:
+  - role: user
+    content:
+      type: text
+      text: "Analyze {{path}} for {{focus}}"
+  - role: assistant
+    content:
+      type: text
+      text: "I'll analyze the code structure first."
+  - role: user
+    content:
+      type: resource
+      resource:
+        uri: "https://example.com/{{path}}"
+        mimeType: text/plain
 ```
 
 ## Action API

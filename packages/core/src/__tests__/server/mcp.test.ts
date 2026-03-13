@@ -248,7 +248,10 @@ describe('createMcpServer', () => {
   });
 
   it('should invoke onPromptGet when prompt callback fires', async () => {
-    const onPromptGet = vi.fn().mockResolvedValue('Hello World');
+    const onPromptGet = vi.fn().mockResolvedValue({
+      description: 'Greeting',
+      messages: [{ role: 'user', content: { type: 'text', text: 'Hello World' } }],
+    });
     const manifest = {
       ...baseManifest,
       prompts: [{
@@ -264,6 +267,45 @@ describe('createMcpServer', () => {
     expect(onPromptGet).toHaveBeenCalledWith('greet', { name: 'World' });
     expect(result.messages[0].role).toBe('user');
     expect(result.messages[0].content.text).toBe('Hello World');
+  });
+
+  it('should pass through multi-message prompts', async () => {
+    const onPromptGet = vi.fn().mockResolvedValue({
+      description: 'Multi-turn',
+      messages: [
+        { role: 'user', content: { type: 'resource', resource: { uri: 'https://example.com/file.ts', mimeType: 'text/plain' } } },
+        { role: 'user', content: { type: 'text', text: 'Explain this code' } },
+      ],
+    });
+    const manifest = {
+      ...baseManifest,
+      prompts: [{
+        name: 'explain',
+        description: 'Explain code',
+        args: [{ name: 'path', required: true }],
+      }],
+    };
+    createMcpServer({ manifest, onToolCall: vi.fn(), onPromptGet });
+    const callback = mockRegisterPrompt.mock.calls[0][2];
+    const result = await callback({ path: 'src/index.ts' });
+    expect(result.messages).toHaveLength(2);
+    expect(result.messages[0].content.type).toBe('resource');
+    expect(result.messages[1].content.type).toBe('text');
+  });
+
+  it('should include description in prompt result', async () => {
+    const onPromptGet = vi.fn().mockResolvedValue({
+      description: 'Custom description',
+      messages: [{ role: 'user', content: { type: 'text', text: 'Hi' } }],
+    });
+    const manifest = {
+      ...baseManifest,
+      prompts: [{ name: 'test', description: 'Test prompt' }],
+    };
+    createMcpServer({ manifest, onToolCall: vi.fn(), onPromptGet });
+    const callback = mockRegisterPrompt.mock.calls[0][2];
+    const result = await callback({});
+    expect(result.description).toBe('Custom description');
   });
 
   it('should register prompt with optional args', () => {

@@ -9,6 +9,22 @@ import { z } from 'zod';
 import { Manifest, Tool, Resource, Prompt } from '../manifest/schema.js';
 
 /**
+ * Result from a prompt get handler, matching MCP GetPromptResult shape.
+ *
+ * For resource content, `resource.text` is required per MCP TextResourceContents.
+ * Use empty string if the resource text is not available at prompt resolution time.
+ */
+export interface PromptResult {
+  description?: string;
+  messages: Array<{
+    role: 'user' | 'assistant';
+    content:
+      | { type: 'text'; text: string }
+      | { type: 'resource'; resource: { uri: string; text: string; mimeType?: string } };
+  }>;
+}
+
+/**
  * MCP server options.
  */
 export interface McpServerOptions {
@@ -17,8 +33,8 @@ export interface McpServerOptions {
   onToolCall: (name: string, input: unknown) => Promise<unknown>;
   /** Resource read handler */
   onResourceRead?: (uri: string) => Promise<string>;
-  /** Prompt get handler */
-  onPromptGet?: (name: string, args: Record<string, string>) => Promise<string>;
+  /** Prompt get handler - returns structured messages matching MCP PromptMessage[] */
+  onPromptGet?: (name: string, args: Record<string, string>) => Promise<PromptResult>;
 }
 
 /**
@@ -151,7 +167,7 @@ function registerResource(
 function registerPrompt(
   server: McpServer,
   prompt: Prompt,
-  onPromptGet?: (name: string, args: Record<string, string>) => Promise<string>
+  onPromptGet?: (name: string, args: Record<string, string>) => Promise<PromptResult>
 ): void {
   if (!onPromptGet) return;
 
@@ -176,17 +192,13 @@ function registerPrompt(
       ...(Object.keys(argsSchemaRecord).length > 0 ? { argsSchema: argsSchemaRecord } : {}),
     },
     async (args) => {
-      const content = await onPromptGet(prompt.name, args as Record<string, string>);
+      const result = await onPromptGet(prompt.name, args as Record<string, string>);
       return {
-        messages: [
-          {
-            role: 'user',
-            content: {
-              type: 'text',
-              text: content,
-            },
-          },
-        ],
+        ...(result.description ? { description: result.description } : {}),
+        messages: result.messages.map((msg) => ({
+          role: msg.role as 'user' | 'assistant',
+          content: msg.content,
+        })),
       };
     }
   );

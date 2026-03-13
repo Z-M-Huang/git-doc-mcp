@@ -269,19 +269,33 @@ export async function serveCommand(options: ServeOptions): Promise<void> {
         throw new Error(`Prompt not found: ${name}`);
       }
 
-      // Build prompt message from description and args
-      let promptText = prompt.description;
+      // Structured messages: substitute {{arg}} placeholders and return
+      if (prompt.messages) {
+        return {
+          description: prompt.description,
+          messages: prompt.messages.map((msg) => ({
+            role: msg.role,
+            content: substituteContent(msg.content, args ?? {}),
+          })),
+        };
+      }
+
+      // Simple fallback: build single user message from description + args
+      let text = prompt.description;
       if (prompt.args && args) {
-        promptText += '\n\nArguments:\n';
+        text += '\n\nArguments:\n';
         for (const arg of prompt.args) {
           const value = args[arg.name];
           if (value !== undefined) {
-            promptText += `- ${arg.name}: ${value}\n`;
+            text += `- ${arg.name}: ${value}\n`;
           }
         }
       }
 
-      return promptText;
+      return {
+        description: prompt.description,
+        messages: [{ role: 'user' as const, content: { type: 'text' as const, text } }],
+      };
     } : undefined,
   });
 
@@ -340,6 +354,34 @@ export function getSecretScopes(manifest: Manifest): Record<string, string[]> {
     result[secret.name] = scopes;
   }
   return result;
+}
+
+/**
+ * Substitute {{argName}} placeholders in a template string.
+ */
+function substituteTemplate(template: string, args: Record<string, string>): string {
+  return template.replace(/\{\{(\w+)\}\}/g, (_match, name) => args[name] ?? `{{${name}}}`);
+}
+
+/**
+ * Substitute {{argName}} placeholders in prompt content.
+ * Ensures resource.text is always present (required by MCP TextResourceContents).
+ */
+function substituteContent(
+  content: { type: 'text'; text: string } | { type: 'resource'; resource: { uri: string; text?: string; mimeType?: string } },
+  args: Record<string, string>,
+): { type: 'text'; text: string } | { type: 'resource'; resource: { uri: string; text: string; mimeType?: string } } {
+  if (content.type === 'text') {
+    return { type: 'text', text: substituteTemplate(content.text, args) };
+  }
+  const resource: { uri: string; text: string; mimeType?: string } = {
+    uri: substituteTemplate(content.resource.uri, args),
+    text: substituteTemplate(content.resource.text ?? '', args),
+  };
+  if (content.resource.mimeType) {
+    resource.mimeType = content.resource.mimeType;
+  }
+  return { type: 'resource', resource };
 }
 
 /**

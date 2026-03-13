@@ -4,7 +4,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { ManifestSchema, ToolSchema, SecretSchema } from '../../manifest/schema.js';
+import { ManifestSchema, ToolSchema, SecretSchema, PromptSchema } from '../../manifest/schema.js';
 
 describe('ManifestSchema', () => {
   describe('valid manifests', () => {
@@ -205,5 +205,103 @@ describe('SecretSchema', () => {
 
     const result = SecretSchema.parse(secret);
     expect(result.scope).toEqual(['https://api.example.com/*', 'https://api2.example.com/*']);
+  });
+});
+
+describe('PromptSchema', () => {
+  it('should accept prompt without messages (backward compat)', () => {
+    const prompt = {
+      name: 'greet',
+      description: 'Greet the user',
+      args: [{ name: 'name', required: true }],
+    };
+    const result = PromptSchema.parse(prompt);
+    expect(result.messages).toBeUndefined();
+    expect(result.args).toHaveLength(1);
+  });
+
+  it('should accept prompt with text messages', () => {
+    const prompt = {
+      name: 'explain',
+      description: 'Explain code',
+      args: [{ name: 'path', required: true }],
+      messages: [
+        { role: 'user', content: { type: 'text', text: 'Explain {{path}}' } },
+      ],
+    };
+    const result = PromptSchema.parse(prompt);
+    expect(result.messages).toHaveLength(1);
+    expect(result.messages![0].role).toBe('user');
+    expect(result.messages![0].content.type).toBe('text');
+  });
+
+  it('should accept prompt with resource messages', () => {
+    const prompt = {
+      name: 'review',
+      description: 'Review code',
+      messages: [
+        {
+          role: 'user',
+          content: {
+            type: 'resource',
+            resource: {
+              uri: 'https://example.com/{{path}}',
+              mimeType: 'text/plain',
+            },
+          },
+        },
+        { role: 'user', content: { type: 'text', text: 'Review the above' } },
+      ],
+    };
+    const result = PromptSchema.parse(prompt);
+    expect(result.messages).toHaveLength(2);
+    expect(result.messages![0].content.type).toBe('resource');
+    expect(result.messages![1].content.type).toBe('text');
+  });
+
+  it('should accept multi-turn assistant messages', () => {
+    const prompt = {
+      name: 'guided',
+      description: 'Guided analysis',
+      messages: [
+        { role: 'user', content: { type: 'text', text: 'Analyze this code' } },
+        { role: 'assistant', content: { type: 'text', text: 'I will look at structure first' } },
+        { role: 'user', content: { type: 'text', text: 'Now check for bugs' } },
+      ],
+    };
+    const result = PromptSchema.parse(prompt);
+    expect(result.messages).toHaveLength(3);
+    expect(result.messages![1].role).toBe('assistant');
+  });
+
+  it('should reject empty messages array', () => {
+    const prompt = {
+      name: 'empty',
+      description: 'Empty messages',
+      messages: [],
+    };
+    expect(() => PromptSchema.parse(prompt)).toThrow();
+  });
+
+  it('should reject invalid role', () => {
+    const prompt = {
+      name: 'bad-role',
+      description: 'Bad role',
+      messages: [
+        { role: 'system', content: { type: 'text', text: 'hi' } },
+      ],
+    };
+    expect(() => PromptSchema.parse(prompt)).toThrow();
+  });
+
+  it('should reject invalid content type', () => {
+    const prompt = {
+      name: 'bad-type',
+      description: 'Bad content type',
+      messages: [
+        { role: 'user', content: { type: 'image', url: 'https://example.com/img.png' } },
+      ],
+    };
+    expect(() => PromptSchema.parse(prompt)).toThrow();
   });
 });

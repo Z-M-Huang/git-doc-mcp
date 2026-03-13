@@ -83,13 +83,54 @@ export const PromptArgSchema = z.object({
 });
 
 /**
+ * Text content in a prompt message (MCP TextContent).
+ */
+export const PromptTextContentSchema = z.object({
+  type: z.literal('text'),
+  text: z.string().min(1),
+});
+
+/**
+ * Embedded resource content in a prompt message (MCP EmbeddedResource).
+ */
+export const PromptResourceContentSchema = z.object({
+  type: z.literal('resource'),
+  resource: z.object({
+    uri: z.string().min(1),
+    text: z.string().optional(),
+    mimeType: z.string().optional(),
+  }),
+});
+
+/**
+ * Content block in a prompt message.
+ * Matches MCP ContentBlock subset relevant for declarative prompts.
+ */
+export const PromptContentSchema = z.discriminatedUnion('type', [
+  PromptTextContentSchema,
+  PromptResourceContentSchema,
+]);
+
+/**
+ * A message in a prompt template (MCP PromptMessage).
+ */
+export const PromptMessageSchema = z.object({
+  role: z.enum(['user', 'assistant']),
+  content: PromptContentSchema,
+});
+
+/**
  * Prompt definition in a manifest.
+ *
+ * When `messages` is provided, they are returned directly (with {{arg}} substitution).
+ * When omitted, a single user message is built from `description` + args.
  */
 export const PromptSchema = z.object({
   name: z.string().min(1).max(64).regex(/^[a-zA-Z0-9_-]+$/),
   title: z.string().optional(),
   description: z.string().min(1),
   args: z.array(PromptArgSchema).optional(),
+  messages: z.array(PromptMessageSchema).min(1).optional(),
 });
 
 /**
@@ -131,6 +172,16 @@ export type Resource = z.infer<typeof ResourceSchema>;
  * Prompt type.
  */
 export type Prompt = z.infer<typeof PromptSchema>;
+
+/**
+ * Prompt message type.
+ */
+export type PromptMessage = z.infer<typeof PromptMessageSchema>;
+
+/**
+ * Prompt content type.
+ */
+export type PromptContent = z.infer<typeof PromptContentSchema>;
 
 /**
  * Tool annotations type.

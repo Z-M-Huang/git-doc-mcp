@@ -76,3 +76,14 @@ prompts:
       - name: focus
         description: Specific aspect to focus on
         required: false
+    messages:
+      - role: user
+        content:
+          type: resource
+          resource:
+            uri: "https://raw.githubusercontent.com/owner/repo/main/{{path}}"
+            mimeType: text/plain
+      - role: user
+        content:
+          type: text
+          text: "Explain the code above from {{path}}. {{focus}}"
