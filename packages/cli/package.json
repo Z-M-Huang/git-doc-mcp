@@ -1,0 +1,29 @@
+{
+  "name": "git-mcp",
+  "version": "0.1.0",
+  "description": "CLI for git-mcp - turn any manifest into an MCP server",
+  "type": "module",
+  "bin": {
+    "git-mcp": "./dist/index.js"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "clean": "rm -rf dist",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@git-mcp/core": "*",
+    "commander": "^12.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.7.0",
+    "vitest": "^2.1.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

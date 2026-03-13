@@ -1,0 +1,78 @@
+schemaVersion: "1.0"
+name: example-repo-mcp
+version: 1.0.0
+description: |
+  Example MCP server for a Git repository.
+  Provides tools for fetching files and searching code.
+  Use when working with this repository's codebase.
+
+instructions: |
+  Use these tools when working with the example-repo codebase.
+  Available tools: fetch-file, search-code.
+  Start with fetch-file to read documentation, then use search-code for specific queries.
+
+secrets:
+  - name: GITHUB_TOKEN
+    description: "Token for accessing private repositories"
+    scope:
+      - "https://api.github.com/*"
+      - "https://raw.githubusercontent.com/*"
+    required: false
+
+tools:
+  - name: fetch-file
+    title: Fetch File
+    description: Fetch a file from the repository by path
+    inputSchema:
+      type: object
+      properties:
+        path:
+          type: string
+          description: File path relative to repo root (e.g., "src/index.ts")
+      required: [path]
+    action: https://example.com/.mcp/actions/fetch-file.v1.js
+    actionHash: "sha256:6b32cd61e662487a92b2047fb168b3e88dcc1ea8af908e8c41df8b0f23a1a818"
+    annotations:
+      readOnlyHint: true
+      destructiveHint: false
+      idempotentHint: true
+      openWorldHint: true
+
+  - name: search-code
+    title: Search Code
+    description: Search for code patterns in the repository
+    inputSchema:
+      type: object
+      properties:
+        query:
+          type: string
+          description: Search query (e.g., "function authenticate")
+        language:
+          type: string
+          description: Filter by programming language
+      required: [query]
+    action: https://example.com/.mcp/actions/search-code.v1.js
+    actionHash: "sha256:2ca0eede1fbc372369dc63279ed776e862641032a1529d4256287149199cf402"
+    annotations:
+      readOnlyHint: true
+      destructiveHint: false
+      idempotentHint: true
+      openWorldHint: true
+
+resources:
+  - name: readme
+    uri: https://raw.githubusercontent.com/owner/repo/main/README.md
+    description: Repository README
+    mimeType: text/markdown
+
+prompts:
+  - name: explain-code
+    title: Explain Code
+    description: Explain a code snippet from the repository
+    args:
+      - name: path
+        description: File path to explain
+        required: true
+      - name: focus
+        description: Specific aspect to focus on
+        required: false
