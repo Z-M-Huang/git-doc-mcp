@@ -1,5 +1,5 @@
 /**
- * @git-mcp/core - Core library for git-mcp
+ * @git-doc-mcp/core - Core library for git-doc-mcp
  *
  * Provides:
  * - Manifest loading and validation
@@ -10,7 +10,7 @@
  *
  * @example
  * ```typescript
- * import { loadManifest, createMcpServer, startMcpServer } from '@git-mcp/core';
+ * import { loadManifest, createMcpServer, startMcpServer } from '@git-doc-mcp/core';
  *
  * const result = await loadManifest({ manifestPath: './manifest.yml' });
  * const server = createMcpServer({
@@ -23,7 +23,7 @@
  * await startMcpServer(server);
  * ```
  *
- * @module @git-mcp/core
+ * @module @git-doc-mcp/core
  */
 
 // Manifest

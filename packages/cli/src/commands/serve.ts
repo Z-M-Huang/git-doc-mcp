@@ -19,7 +19,7 @@ import {
   validateUrl,
   createAuditLogger,
   RateLimiter,
-} from '@git-mcp/core';
+} from '@git-doc-mcp/core';
 
 /**
  * Serve command options.
@@ -388,7 +388,7 @@ function substituteContent(
  * Check TOFU (Trust-on-First-Use) for manifest hash.
  */
 async function checkTofu(manifestPath: string, currentHash: string, trustChanged = false): Promise<void> {
-  const trustDir = path.join(os.homedir(), '.git-mcp', 'trust');
+  const trustDir = path.join(os.homedir(), '.git-doc-mcp', 'trust');
   const trustFile = path.join(trustDir, hashPath(manifestPath), 'manifest.trust');
 
   try {

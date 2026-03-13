@@ -1,6 +1,6 @@
-# git-mcp - Turn Any Manifest into an MCP Server
+# git-doc-mcp - Turn Any Manifest into an MCP Server
 
-[![npm version](https://badge.fury.io/js/git-mcp.svg)](https://www.npmjs.com/package/git-mcp)
+[![npm version](https://badge.fury.io/js/git-doc-mcp.svg)](https://www.npmjs.com/package/git-doc-mcp)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Node.js](https://img.shields.io/badge/node-%3E%3D18-brightgreen.svg)](https://nodejs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.x-blue.svg)](https://www.typescriptlang.org/)
@@ -10,9 +10,9 @@
 
 **Write a manifest, host it anywhere, and users can instantly use it with their AI tools.**
 
-## What is git-mcp?
+## What is git-doc-mcp?
 
-git-mcp is a **declarative MCP manifest system** that lets anyone create and host MCP servers without running infrastructure. It turns any manifest URL into a fully-functional MCP server with custom tools, resources, and prompts - all defined in YAML.
+git-doc-mcp is a **declarative MCP manifest system** that lets anyone create and host MCP servers without running infrastructure. It turns any manifest URL into a fully-functional MCP server with custom tools, resources, and prompts - all defined in YAML.
 
 **Key features:**
 - **No hosting required** - Use GitHub Pages, GitLab Pages, S3, any static hosting
@@ -29,10 +29,10 @@ git-mcp is a **declarative MCP manifest system** that lets anyone create and hos
 
 ```bash
 # Using npm
-npm install -g git-mcp
+npm install -g git-doc-mcp
 
 # Using npx (no install needed)
-npx git-mcp --manifest https://example.com/.mcp/manifest.yml
+npx git-doc-mcp --manifest https://example.com/.mcp/manifest.yml
 ```
 
 ### 2. Configure with Claude Code
@@ -44,7 +44,7 @@ Add to `~/.claude/config.json`:
   "mcpServers": {
     "my-repo": {
       "command": "npx",
-      "args": ["git-mcp", "--manifest", "https://example.com/.mcp/manifest.yml"]
+      "args": ["git-doc-mcp", "--manifest", "https://example.com/.mcp/manifest.yml"]
     }
   }
 }
@@ -80,20 +80,20 @@ tools:
 ### npm
 
 ```bash
-npm install -g git-mcp
+npm install -g git-doc-mcp
 ```
 
 ### npx (no install)
 
 ```bash
-npx git-mcp --manifest <url-or-path>
+npx git-doc-mcp --manifest <url-or-path>
 ```
 
 ### Local Development
 
 ```bash
-git clone https://github.com/user/git-mcp.git
-cd git-mcp
+git clone https://github.com/user/git-doc-mcp.git
+cd git-doc-mcp
 npm install
 npm run build
 ```
@@ -103,38 +103,38 @@ npm run build
 ### Public Manifest
 
 ```bash
-npx git-mcp --manifest https://raw.githubusercontent.com/owner/repo/main/.mcp/manifest.yml
+npx git-doc-mcp --manifest https://raw.githubusercontent.com/owner/repo/main/.mcp/manifest.yml
 ```
 
 ### Private Manifest with Authentication
 
 ```bash
-npx git-mcp --manifest https://private.example.com/.mcp/manifest.yml \
+npx git-doc-mcp --manifest https://private.example.com/.mcp/manifest.yml \
   --manifest-header "Authorization: Bearer $TOKEN"
 ```
 
 ### Local Development
 
 ```bash
-npx git-mcp --manifest ./path/to/manifest.yml
+npx git-doc-mcp --manifest ./path/to/manifest.yml
 ```
 
 ### With Pre-approved Secrets
 
 ```bash
 # Via CLI flag
-npx git-mcp --manifest https://example.com/.mcp/manifest.yml \
+npx git-doc-mcp --manifest https://example.com/.mcp/manifest.yml \
   --secret GITHUB_TOKEN=$GITHUB_TOKEN
 
 # Via environment variable
 export GIT_MCP_SECRET_GITHUB_TOKEN=$GITHUB_TOKEN
-npx git-mcp --manifest https://example.com/.mcp/manifest.yml
+npx git-doc-mcp --manifest https://example.com/.mcp/manifest.yml
 ```
 
 ### Hash Pinning (for CI/CD)
 
 ```bash
-npx git-mcp --manifest https://example.com/.mcp/manifest.yml \
+npx git-doc-mcp --manifest https://example.com/.mcp/manifest.yml \
   --manifest-hash sha256:abc123...
 ```
 
@@ -142,7 +142,7 @@ npx git-mcp --manifest https://example.com/.mcp/manifest.yml \
 
 ```bash
 # Limit to 30 tool calls per minute
-npx git-mcp --manifest https://example.com/.mcp/manifest.yml \
+npx git-doc-mcp --manifest https://example.com/.mcp/manifest.yml \
   --rate-limit 30
 ```
 
@@ -329,38 +329,38 @@ The `--secret` CLI flag takes precedence over environment variables.
 
 ```bash
 # Basic usage
-git-mcp --manifest ./manifest.yml
+git-doc-mcp --manifest ./manifest.yml
 
 # With authentication headers
-git-mcp --manifest https://... \
+git-doc-mcp --manifest https://... \
   --manifest-header "Authorization: Bearer $TOKEN" \
   --action-code-header "Authorization: Bearer $TOKEN"
 
 # Separate resource headers
-git-mcp --manifest https://... \
+git-doc-mcp --manifest https://... \
   --resource-header "Authorization: Bearer $RESOURCE_TOKEN"
 
 # With secrets and rate limiting
-git-mcp --manifest https://... \
+git-doc-mcp --manifest https://... \
   --secret GITHUB_TOKEN=$TOKEN \
   --rate-limit 60
 
 # Hash pinned (for CI/CD)
-git-mcp --manifest https://... --manifest-hash sha256:abc123...
+git-doc-mcp --manifest https://... --manifest-hash sha256:abc123...
 
 # Accept manifest changes (TOFU override)
-git-mcp --manifest https://... --trust-changed
+git-doc-mcp --manifest https://... --trust-changed
 
 # Custom memory limit (256MB)
-git-mcp --manifest https://... --memory-limit 268435456
+git-doc-mcp --manifest https://... --memory-limit 268435456
 
 # Allow HTTP (not recommended for production)
-git-mcp --manifest http://localhost:8080/manifest.yml --allow-http
+git-doc-mcp --manifest http://localhost:8080/manifest.yml --allow-http
 ```
 
 ## Comparison
 
-| Feature | git-mcp | Context7 | idosal/git-mcp |
+| Feature | git-doc-mcp | Context7 | idosal/git-doc-mcp |
 |---------|---------|----------|----------------|
 | **Hosting** | Any static host | Hosted service | Needs separate server |
 | **Custom actions** | User-defined JS | Fixed tools | Limited actions |
@@ -420,7 +420,7 @@ secrets:
 
 ### TOFU (Trust-on-First-Use)
 
-On first use, git-mcp stores the manifest's SHA-256 hash. If the manifest changes:
+On first use, git-doc-mcp stores the manifest's SHA-256 hash. If the manifest changes:
 
 ```
 Warning: Manifest content has changed since last use!
@@ -439,12 +439,12 @@ Sliding-window rate limiter prevents excessive tool calls:
 
 ```bash
 # 60 calls per minute
-git-mcp --manifest https://... --rate-limit 60
+git-doc-mcp --manifest https://... --rate-limit 60
 ```
 
 ### Audit Logging
 
-All `ctx.fetch` calls are logged to `~/.git-mcp/logs/audit.jsonl`:
+All `ctx.fetch` calls are logged to `~/.git-doc-mcp/logs/audit.jsonl`:
 - URL, HTTP status, duration
 - Redirect hops
 - Secret access (allowed/denied)
@@ -470,7 +470,7 @@ npm test           # Run all tests (268 tests)
 ### Project Structure
 
 ```
-git-mcp/
+git-doc-mcp/
   packages/
     core/          # Manifest loading, sandbox, worker, MCP server
     cli/           # CLI entry point and serve command

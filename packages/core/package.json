@@ -1,7 +1,7 @@
 {
-  "name": "@git-mcp/core",
+  "name": "@git-doc-mcp/core",
   "version": "0.1.0",
-  "description": "Core library for git-mcp - manifest loader, sandbox executor, and MCP server",
+  "description": "Core library for git-doc-mcp - manifest loader, sandbox executor, and MCP server",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",

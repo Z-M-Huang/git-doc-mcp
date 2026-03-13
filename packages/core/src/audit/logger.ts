@@ -1,6 +1,6 @@
 /**
  * Structured audit logger for security events.
- * Writes JSON-lines to ~/.git-mcp/logs/audit.jsonl with auto-rotation at 10MB.
+ * Writes JSON-lines to ~/.git-doc-mcp/logs/audit.jsonl with auto-rotation at 10MB.
  *
  * IMPORTANT: This logger runs ONLY in the main process.
  * Worker processes use WorkerAuditProxy (defined in worker-entry.ts)
@@ -67,7 +67,7 @@ export class FileAuditLogger implements AuditLogger {
   private flushing = false;
 
   constructor(logDir?: string) {
-    this.logDir = logDir ?? path.join(os.homedir(), '.git-mcp', 'logs');
+    this.logDir = logDir ?? path.join(os.homedir(), '.git-doc-mcp', 'logs');
     this.logFile = path.join(this.logDir, 'audit.jsonl');
     this.flushTimer = setInterval(() => {
       this.flush().catch(() => {});

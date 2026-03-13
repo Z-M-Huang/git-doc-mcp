@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 /**
- * git-mcp CLI entry point.
+ * git-doc-mcp CLI entry point.
  *
  * Usage:
- *   npx git-mcp --manifest <url-or-path> [options]
- *   npx git-mcp serve --manifest <url-or-path> [options]
+ *   npx git-doc-mcp --manifest <url-or-path> [options]
+ *   npx git-doc-mcp serve --manifest <url-or-path> [options]
  *
  * Options:
  *   --manifest <path>          URL or local path to manifest.yml
@@ -22,7 +22,7 @@ import { serveCommand } from './commands/serve.js';
 const program = new Command();
 
 program
-  .name('git-mcp')
+  .name('git-doc-mcp')
   .description('Turn any manifest into an MCP server')
   .version('0.1.0');
 

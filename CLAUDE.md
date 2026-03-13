@@ -2,10 +2,10 @@
 
 ## Project Overview
 
-git-mcp is a **declarative MCP manifest system** that lets anyone create and host MCP servers without running infrastructure. It consists of:
+git-doc-mcp is a **declarative MCP manifest system** that lets anyone create and host MCP servers without running infrastructure. It consists of:
 
-- **@git-mcp/core** - Core library with manifest loading, sandbox execution, worker process management, and MCP server setup
-- **git-mcp** (CLI) - Command-line interface for running MCP servers from manifests
+- **@git-doc-mcp/core** - Core library with manifest loading, sandbox execution, worker process management, and MCP server setup
+- **git-doc-mcp** (CLI) - Command-line interface for running MCP servers from manifests
 - **template** - Example manifest and actions for reference
 
 ## Development Setup
@@ -50,7 +50,7 @@ cd packages/core && npm run test:watch
 ## Project Structure
 
 ```
-git-mcp/
+git-doc-mcp/
 ├── packages/
 │   ├── core/                   # Core library
 │   │   ├── src/
@@ -241,7 +241,7 @@ Secrets accessed via `ctx.getSecret(name, url)` with URL scope validation:
 
 ### Audit Logging
 
-- All `ctx.fetch` calls logged to `~/.git-mcp/logs/audit.jsonl`
+- All `ctx.fetch` calls logged to `~/.git-doc-mcp/logs/audit.jsonl`
 - Includes: URL, status, duration, redirects, secret access
 - Automatic log rotation
 

@@ -1,5 +1,5 @@
 /**
- * Zod schema for git-mcp manifest files.
+ * Zod schema for git-doc-mcp manifest files.
  * @module manifest/schema
  */
 

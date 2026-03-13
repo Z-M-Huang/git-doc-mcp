@@ -1,5 +1,5 @@
 {
-  "name": "git-mcp",
+  "name": "git-doc-mcp",
   "version": "0.1.0",
   "private": true,
   "description": "Turn any manifest URL into a fully-functional MCP server",
@@ -20,7 +20,7 @@
     "node": ">=18.0.0"
   },
   "scripts": {
-    "build": "npm run build -w @git-mcp/core && npm run build -w git-mcp",
+    "build": "npm run build -w @git-doc-mcp/core && npm run build -w git-doc-mcp",
     "test": "npm run test -ws",
     "lint": "npm run lint -ws",
     "clean": "npm run clean -ws",

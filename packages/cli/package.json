@@ -1,10 +1,10 @@
 {
-  "name": "git-mcp",
+  "name": "git-doc-mcp",
   "version": "0.1.0",
-  "description": "CLI for git-mcp - turn any manifest into an MCP server",
+  "description": "CLI for git-doc-mcp - turn any manifest into an MCP server",
   "type": "module",
   "bin": {
-    "git-mcp": "./dist/index.js"
+    "git-doc-mcp": "./dist/index.js"
   },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -15,7 +15,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@git-mcp/core": "*",
+    "@git-doc-mcp/core": "*",
     "commander": "^12.0.0"
   },
   "devDependencies": {

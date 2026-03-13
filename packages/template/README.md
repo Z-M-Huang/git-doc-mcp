@@ -1,6 +1,6 @@
 # Example Template
 
-This directory contains an example manifest and actions for creating a git-mcp MCP server.
+This directory contains an example manifest and actions for creating a git-doc-mcp MCP server.
 
 ## Structure
 
@@ -20,10 +20,10 @@ This directory contains an example manifest and actions for creating a git-mcp M
    - Update action URLs to point to your hosted actions
    - Calculate and update `actionHash` values
 3. Host the manifest and actions (GitHub Pages, S3, etc.)
-4. Use with git-mcp CLI:
+4. Use with git-doc-mcp CLI:
 
 ```bash
-npx git-mcp --manifest https://your-domain.com/.mcp/manifest.yml
+npx git-doc-mcp --manifest https://your-domain.com/.mcp/manifest.yml
 ```
 
 ## Customization
