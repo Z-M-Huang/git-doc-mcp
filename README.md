@@ -2,6 +2,11 @@
 
 [![npm version](https://badge.fury.io/js/git-mcp.svg)](https://www.npmjs.com/package/git-mcp)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Node.js](https://img.shields.io/badge/node-%3E%3D18-brightgreen.svg)](https://nodejs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.x-blue.svg)](https://www.typescriptlang.org/)
+[![Linux](https://img.shields.io/badge/Linux-supported-success.svg)](https://github.com)
+[![macOS](https://img.shields.io/badge/macOS-supported-success.svg)](https://github.com)
+[![Windows](https://img.shields.io/badge/Windows-supported-success.svg)](https://github.com)
 
 **Write a manifest, host it anywhere, and users can instantly use it with their AI tools.**
 
@@ -10,11 +15,13 @@
 git-mcp is a **declarative MCP manifest system** that lets anyone create and host MCP servers without running infrastructure. It turns any manifest URL into a fully-functional MCP server with custom tools, resources, and prompts - all defined in YAML.
 
 **Key features:**
-- 🚀 **No hosting required** - Use GitHub Pages, GitLab Pages, S3, any static hosting
-- 🔧 **Custom JavaScript actions** - Define your own tool logic
-- 🔐 **Capability-scoped secrets** - Fine-grained access control
-- 🌐 **Platform-agnostic** - Works with GitHub, GitLab, S3, local files
-- 🔒 **TOFU manifest verification** - Trust-on-first-use for security
+- **No hosting required** - Use GitHub Pages, GitLab Pages, S3, any static hosting
+- **Custom JavaScript actions** - Define your own tool logic
+- **Capability-scoped secrets** - Fine-grained access control with URL pattern matching
+- **Platform-agnostic** - Works with GitHub, GitLab, S3, local files
+- **TOFU manifest verification** - Trust-on-first-use with fail-closed security
+- **Three-layer isolation** - Worker process + isolated-vm + URL validation
+- **Cross-platform** - Linux, macOS, Windows
 
 ## Quick Start
 
@@ -85,10 +92,10 @@ npx git-mcp --manifest <url-or-path>
 ### Local Development
 
 ```bash
-git clone https://github.com/your-org/git-mcp.git
+git clone https://github.com/user/git-mcp.git
 cd git-mcp
-pnpm install
-pnpm build
+npm install
+npm run build
 ```
 
 ## Usage Examples
@@ -115,8 +122,13 @@ npx git-mcp --manifest ./path/to/manifest.yml
 ### With Pre-approved Secrets
 
 ```bash
+# Via CLI flag
 npx git-mcp --manifest https://example.com/.mcp/manifest.yml \
   --secret GITHUB_TOKEN=$GITHUB_TOKEN
+
+# Via environment variable
+export GIT_MCP_SECRET_GITHUB_TOKEN=$GITHUB_TOKEN
+npx git-mcp --manifest https://example.com/.mcp/manifest.yml
 ```
 
 ### Hash Pinning (for CI/CD)
@@ -124,6 +136,14 @@ npx git-mcp --manifest https://example.com/.mcp/manifest.yml \
 ```bash
 npx git-mcp --manifest https://example.com/.mcp/manifest.yml \
   --manifest-hash sha256:abc123...
+```
+
+### Rate Limiting
+
+```bash
+# Limit to 30 tool calls per minute
+npx git-mcp --manifest https://example.com/.mcp/manifest.yml \
+  --rate-limit 30
 ```
 
 ## Manifest Schema
@@ -178,24 +198,22 @@ prompts:                       # Optional - prompt templates
 Actions are plain JavaScript files that export a default async function:
 
 ```javascript
-/**
- * @param {object} input - Tool input matching inputSchema
- * @param {object} ctx - Execution context
- * @param {object} ctx.manifest - Manifest metadata
- * @param {function} ctx.fetch - Scoped fetch function
- * @param {object} ctx.secrets - User-approved secrets
- * @param {function} ctx.log - Logging function
- */
 export default async function myAction(input, ctx) {
-  const { fetch, secrets, log } = ctx;
+  const { fetch, getSecret, log, manifest } = ctx;
 
-  log('info', 'Starting action');
+  log('info', `Running action for ${manifest.name}`);
 
-  const response = await fetch('https://api.example.com/data', {
-    headers: secrets.API_KEY ? { 'Authorization': `Bearer ${secrets.API_KEY}` } : {}
+  // Get a secret scoped to the target URL
+  const url = 'https://api.example.com/data';
+  const token = getSecret('API_KEY', url);
+
+  const response = await fetch(url, {
+    headers: token ? { 'Authorization': `Bearer ${token}` } : {}
   });
 
-  const data = await response.json();
+  // response.text is a property (not a method)
+  // response.json() is a synchronous method
+  const data = response.json();
 
   return {
     content: [{ type: 'text', text: JSON.stringify(data, null, 2) }]
@@ -207,10 +225,23 @@ export default async function myAction(input, ctx) {
 
 | Method | Description |
 |--------|-------------|
-| `ctx.fetch(url, options)` | Scoped fetch with URL validation and redirect handling |
-| `ctx.secrets` | User-approved secrets (only those in scope for URL) |
+| `ctx.fetch(url, options)` | Scoped fetch with SSRF protection and redirect validation |
+| `ctx.getSecret(name, url)` | Get a secret value if the URL matches the secret's scope pattern |
 | `ctx.log(level, message)` | Logging (levels: debug, info, warn, error) |
-| `ctx.manifest` | Manifest metadata (name, version) |
+| `ctx.manifest` | Manifest metadata (`{ name, version }`) |
+
+### Fetch Response
+
+`ctx.fetch` returns a serialized response object (not a native `Response`):
+
+| Property/Method | Type | Description |
+|-----------------|------|-------------|
+| `response.ok` | `boolean` | `true` if status is 200-299 |
+| `response.status` | `number` | HTTP status code |
+| `response.statusText` | `string` | HTTP status text |
+| `response.text` | `string` | Response body as a string (property, not method) |
+| `response.json()` | `object` | Parse body as JSON (synchronous method) |
+| `response.headers` | `object` | Response headers as key-value pairs |
 
 ### Return Format
 
@@ -231,15 +262,30 @@ return {
 
 ### Options
 
-| Option | Description |
-|--------|-------------|
-| `--manifest <path>` | URL or local path to manifest.yml (required) |
-| `--manifest-header <header>` | Header for fetching manifest (repeatable) |
-| `--manifest-hash <hash>` | Expected manifest hash for pinning |
-| `--action-code-header <header>` | Header for downloading actions (repeatable) |
-| `--secret <name=value>` | Pre-approved secret (repeatable) |
-| `--timeout <ms>` | Worker timeout (default: 60000) |
-| `--memory-limit <bytes>` | Memory limit (default: 134217728) |
+| Option | Description | Default |
+|--------|-------------|---------|
+| `--manifest <path>` | URL or local path to manifest.yml | (required) |
+| `--manifest-header <header>` | Header for fetching manifest (repeatable) | |
+| `--manifest-hash <hash>` | Expected manifest hash for pinning | |
+| `--action-code-header <header>` | Header for downloading action scripts (repeatable) | |
+| `--resource-header <header>` | Header for fetching resources (repeatable) | |
+| `--secret <name=value>` | Pre-approved secret (repeatable) | |
+| `--timeout <ms>` | Worker timeout in milliseconds | `60000` |
+| `--memory-limit <bytes>` | Sandbox memory limit (8MB - 1GB) | `134217728` (128MB) |
+| `--rate-limit <n>` | Max tool calls per minute (0 = unlimited) | `0` |
+| `--allow-http` | Allow insecure HTTP URLs (HTTPS-only by default) | `false` |
+| `--trust-changed` | Accept manifest hash changes (TOFU override) | `false` |
+
+### Environment Variables
+
+Secrets can be provided via environment variables prefixed with `GIT_MCP_SECRET_`:
+
+```bash
+export GIT_MCP_SECRET_GITHUB_TOKEN=ghp_abc123
+export GIT_MCP_SECRET_API_KEY=sk-xyz789
+```
+
+The `--secret` CLI flag takes precedence over environment variables.
 
 ### Examples
 
@@ -247,14 +293,31 @@ return {
 # Basic usage
 git-mcp --manifest ./manifest.yml
 
-# With authentication
-git-mcp --manifest https://... --manifest-header "Authorization: Bearer $TOKEN"
+# With authentication headers
+git-mcp --manifest https://... \
+  --manifest-header "Authorization: Bearer $TOKEN" \
+  --action-code-header "Authorization: Bearer $TOKEN"
 
-# With secrets
-git-mcp --manifest https://... --secret GITHUB_TOKEN=$TOKEN --secret API_KEY=$KEY
+# Separate resource headers
+git-mcp --manifest https://... \
+  --resource-header "Authorization: Bearer $RESOURCE_TOKEN"
+
+# With secrets and rate limiting
+git-mcp --manifest https://... \
+  --secret GITHUB_TOKEN=$TOKEN \
+  --rate-limit 60
 
 # Hash pinned (for CI/CD)
 git-mcp --manifest https://... --manifest-hash sha256:abc123...
+
+# Accept manifest changes (TOFU override)
+git-mcp --manifest https://... --trust-changed
+
+# Custom memory limit (256MB)
+git-mcp --manifest https://... --memory-limit 268435456
+
+# Allow HTTP (not recommended for production)
+git-mcp --manifest http://localhost:8080/manifest.yml --allow-http
 ```
 
 ## Comparison
@@ -262,38 +325,46 @@ git-mcp --manifest https://... --manifest-hash sha256:abc123...
 | Feature | git-mcp | Context7 | idosal/git-mcp |
 |---------|---------|----------|----------------|
 | **Hosting** | Any static host | Hosted service | Needs separate server |
-| **Custom actions** | ✅ User-defined JS | ❌ Fixed tools | ❌ Limited actions |
-| **Private repos** | ✅ Auth headers | ✅ OAuth | ❓ Unknown |
+| **Custom actions** | User-defined JS | Fixed tools | Limited actions |
+| **Private repos** | Auth headers | OAuth | Unknown |
 | **Platform** | Any (GitHub, GitLab, S3, etc.) | Any | GitHub only |
-| **Local development** | ✅ Local files | ❌ | ❌ |
+| **Local development** | Local files | No | No |
+| **Secret scoping** | URL pattern matching | N/A | N/A |
+| **Manifest integrity** | TOFU + hash pinning | N/A | N/A |
 
 ## Security Model
 
 ### Trusted-Manifest System
 
-Users explicitly configure manifest URLs they trust. This is consistent with the official GitHub MCP Server's approach.
+Users explicitly configure manifest URLs they trust. This is consistent with the official GitHub MCP Server's approach — the user configures which server to use, so they trust the server author.
 
 ### Three-Layer Isolation
 
 ```
-┌─────────────────────────────────────────────────┐
-│  Layer 1: Worker Process (Primary Boundary)    │
-│  - Separate Node.js child process               │
-│  - Crash in action doesn't kill CLI             │
-└─────────────────────────────────────────────────┘
-                      │
-┌─────────────────────────────────────────────────┐
-│  Layer 2: isolated-vm (Defense-in-Depth)       │
-│  - Memory limit: 128MB default                  │
-│  - Timeout: 30s default                         │
-└─────────────────────────────────────────────────┘
-                      │
-┌─────────────────────────────────────────────────┐
-│  Layer 3: Controlled API Surface               │
-│  - ctx.fetch with URL validation                │
-│  - ctx.secrets (user-approved, scoped)          │
-└─────────────────────────────────────────────────┘
+Layer 1: Worker Process (Primary Boundary)
+  - Separate Node.js child process
+  - Sanitized environment (no inherited credentials)
+  - Crash in action doesn't kill CLI
+
+Layer 2: isolated-vm (Defense-in-Depth)
+  - Configurable memory limit (default: 128MB)
+  - CPU timeout: 30s
+  - No direct filesystem/network access
+
+Layer 3: Controlled API Surface
+  - ctx.fetch with SSRF protection
+  - ctx.getSecret with URL scope validation
+  - Audit logging of all network calls
 ```
+
+### SSRF Protection
+
+All URLs are validated before fetch:
+- HTTPS-only by default (use `--allow-http` to override)
+- Private IP ranges blocked (10.x, 172.16-31.x, 192.168.x, localhost)
+- DNS resolution validated before connection
+- Every redirect URL re-validated
+- Cross-origin redirects strip sensitive headers (Authorization, Cookie)
 
 ### Capability-Scoped Secrets
 
@@ -307,27 +378,66 @@ secrets:
       - "https://raw.githubusercontent.com/*"
 ```
 
-The `ctx.fetch` function validates that every URL (including redirects) matches approved scopes.
+`ctx.getSecret(name, url)` only returns the secret value if the URL matches the scope pattern. Path-boundary-aware wildcard matching prevents `/repos-private` from matching a `/repos/*` scope.
 
 ### TOFU (Trust-on-First-Use)
 
-On first use, git-mcp stores the manifest hash. If the hash changes, it warns the user:
+On first use, git-mcp stores the manifest's SHA-256 hash. If the manifest changes:
 
 ```
-⚠️  Manifest content has changed since last use!
+Warning: Manifest content has changed since last use!
   Previous: sha256:abc123...
   Current:  sha256:def456...
+
+To accept this change, re-run with: --trust-changed
+For CI pinning, use: --manifest-hash sha256:def456...
 ```
 
-For CI/CD, use `--manifest-hash` for hard pinning.
+The server exits with a non-zero code unless `--trust-changed` is provided. For CI/CD, use `--manifest-hash` for hard pinning.
+
+### Rate Limiting
+
+Sliding-window rate limiter prevents excessive tool calls:
+
+```bash
+# 60 calls per minute
+git-mcp --manifest https://... --rate-limit 60
+```
+
+### Audit Logging
+
+All `ctx.fetch` calls are logged to `~/.git-mcp/logs/audit.jsonl`:
+- URL, HTTP status, duration
+- Redirect hops
+- Secret access (allowed/denied)
+- Action start/end with timing
 
 ## Contributing
 
 1. Fork the repository
 2. Create a feature branch
 3. Make your changes
-4. Run tests: `pnpm test`
-5. Submit a pull request
+4. Build: `npm run build`
+5. Run tests: `npm test`
+6. Submit a pull request
+
+### Development Setup
+
+```bash
+npm install        # Install dependencies
+npm run build      # Build all packages
+npm test           # Run all tests (268 tests)
+```
+
+### Project Structure
+
+```
+git-mcp/
+  packages/
+    core/          # Manifest loading, sandbox, worker, MCP server
+    cli/           # CLI entry point and serve command
+    template/      # Example manifest and actions
+```
 
 ## License
 
