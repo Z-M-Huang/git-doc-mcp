@@ -63,14 +63,20 @@ git-mcp/
 │   │   │   │   └── url-validator.ts # SSRF protection
 │   │   │   ├── worker/         # Worker process
 │   │   │   │   ├── process.ts  # Process management
-│   │   │   │   └── protocol.ts # IPC protocol
+│   │   │   │   ├── protocol.ts # IPC protocol
+│   │   │   │   └── worker-entry.ts # Worker entry point
 │   │   │   ├── secrets/        # Secret management
 │   │   │   │   ├── manager.ts  # Approval and scoping
 │   │   │   │   └── patterns.ts # URL pattern matching
 │   │   │   ├── server/         # MCP server
 │   │   │   │   └── mcp.ts      # Server setup
-│   │   │   └── http/           # HTTP client
-│   │   │       └── client.ts   # Fetch with validation
+│   │   │   ├── http/           # HTTP client
+│   │   │   │   ├── client.ts   # Fetch with validation
+│   │   │   │   └── redirect-utils.ts # Cross-origin header stripping
+│   │   │   ├── audit/          # Audit logging
+│   │   │   │   └── logger.ts   # JSONL audit logger with rotation
+│   │   │   └── rate-limit/     # Rate limiting
+│   │   │       └── limiter.ts  # Sliding-window rate limiter
 │   │   └── package.json
 │   │
 │   ├── cli/                    # CLI package
@@ -112,9 +118,9 @@ git-mcp/
 ### Three-Layer Isolation
 
 1. **Worker Process** - Primary security boundary
-   - Separate Node.js process
-   - OS-level resource limits
+   - Separate Node.js process with sanitized environment
    - Crash doesn't affect main process
+   - Configurable memory limit (default 128MB, via `--memory-limit`)
 
 2. **isolated-vm** - Defense-in-depth
    - Memory limit: 128MB
@@ -178,7 +184,7 @@ cd packages/core && npm run test:watch
 
 ### Adding a New CLI Flag
 
-1. Add option to `packages/cli/src/index.ts`
+1. Add option to BOTH top-level and `serve` subcommand in `packages/cli/src/index.ts`
 2. Update `ServeOptions` interface in `serve.ts`
 3. Implement handling in `serveCommand`
 
@@ -209,23 +215,35 @@ cd packages/core && npm run test:watch
 ### SSRF Protection
 
 All URLs are validated before fetch:
-- Only HTTPS allowed
-- Private IP ranges blocked
-- DNS rebinding protection
-- Redirect validation
+- HTTPS-only by default (`--allow-http` to override)
+- Private IP ranges blocked (10.x, 172.16-31.x, 192.168.x, localhost)
+- DNS resolution validated
+- Every redirect URL re-validated
+- Cross-origin redirects strip Authorization/Cookie headers
 
 ### Secret Scoping
 
-Secrets are only available for URLs matching their scope patterns:
+Secrets accessed via `ctx.getSecret(name, url)` with URL scope validation:
 - Pattern: `https://api.github.com/*`
-- No subdomain matching
-- Exact origin required
+- Path-boundary-aware wildcard matching (`/repos/*` won't match `/repos-private`)
+- No subdomain matching, exact origin required
 
 ### Manifest Integrity
 
-- TOFU on first use
+- TOFU on first use (stores hash, fail-closed on change)
 - Hash pinning via `--manifest-hash`
-- Warning on manifest change
+- `--trust-changed` flag to accept manifest changes
+
+### Rate Limiting
+
+- Sliding-window rate limiter via `--rate-limit <calls-per-minute>`
+- Default: unlimited (0)
+
+### Audit Logging
+
+- All `ctx.fetch` calls logged to `~/.git-mcp/logs/audit.jsonl`
+- Includes: URL, status, duration, redirects, secret access
+- Automatic log rotation
 
 ## Testing
 
@@ -244,11 +262,24 @@ cd packages/core && npx vitest run src/__tests__/manifest/schema.test.ts
 cd packages/core && npm run test:watch
 ```
 
-### Test Coverage
+### Test Coverage (268 tests across 16 files)
 
 - `manifest/schema.test.ts` - Manifest schema validation
+- `manifest/loader.test.ts` - URL/file loading, HTTP rejection, redirect handling
 - `secrets/patterns.test.ts` - URL scope pattern matching
-- `sandbox/url-validator.test.ts` - SSRF protection
+- `secrets/manager.test.ts` - Secret approval, scoping, getSecret
+- `sandbox/executor.test.ts` - Sandbox execution, json() method, size limits
+- `sandbox/context.test.ts` - Action context, fetch, audit logging
+- `sandbox/url-validator.test.ts` - SSRF protection, private IPs, DNS
+- `worker/process.test.ts` - Worker lifecycle, crash recovery
+- `worker/protocol.test.ts` - IPC message framing
+- `worker/worker-entry.test.ts` - Request handling, memoryLimit forwarding
+- `server/mcp.test.ts` - MCP server registration
+- `http/client.test.ts` - HTTP client, HTTPS enforcement
+- `http/redirect-utils.test.ts` - Cross-origin header stripping
+- `rate-limit/limiter.test.ts` - Sliding-window rate limiter
+- `audit/logger.test.ts` - Audit logging, rotation
+- `security/regression.test.ts` - Security regression tests
 
 ## Common Issues
 
