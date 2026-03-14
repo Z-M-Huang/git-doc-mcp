@@ -181,26 +181,28 @@ export async function executeAction(
       actionContext.log(level as 'debug' | 'info' | 'warn' | 'error', message);
     };
 
-    // Create fetch wrapper that returns a serializable result
-    const fetchCallback = async (url: string, options?: Record<string, unknown>) => {
+    // Create fetch wrapper that returns a JSON string (not an object).
+    // isolated-vm cannot transfer objects or Promises across the boundary
+    // via Reference.apply(), but strings transfer cleanly.
+    const fetchCallback = async (url: string, optionsJson?: string) => {
       try {
+        const options = optionsJson ? JSON.parse(optionsJson) : {};
         const response = await actionContext.fetch(url, options as RequestInit);
         const text = await response.text();
-        return {
+        return JSON.stringify({
           ok: response.ok,
           status: response.status,
           statusText: response.statusText,
           text: text,
           headers: Object.fromEntries(response.headers.entries()),
-          json: () => JSON.parse(text),
-        };
+        });
       } catch (error) {
-        return {
+        return JSON.stringify({
           ok: false,
           status: 0,
           statusText: 'Error',
           error: error instanceof Error ? error.message : String(error),
-        };
+        });
       }
     };
 
@@ -210,8 +212,10 @@ export async function executeAction(
     };
 
     // Set up callbacks in the isolate
+    // _fetch uses ivm.Reference (not Callback) because it is async.
+    // ivm.Callback cannot return Promises across the isolate boundary.
     await global.set('_log', new ivm.Callback(logCallback));
-    await global.set('_fetch', new ivm.Callback(fetchCallback));
+    await global.set('_fetch', new ivm.Reference(fetchCallback));
     await global.set('_resolve', new ivm.Callback((result: ToolResult) => resolveResult(result)));
     await global.set('_reject', new ivm.Callback((error: string) => rejectResult(new Error(error))));
     await global.set('_input', new ivm.ExternalCopy(input).copyInto());
@@ -242,7 +246,13 @@ export async function executeAction(
       const ctx = {
         manifest: __manifest__,
         fetch: async (url, options) => {
-          return await __fetch__(url, options || {});
+          // __fetch__ is an ivm.Reference to an async host function.
+          // It returns a JSON string; we parse it and add the json() helper.
+          const optionsJson = options ? JSON.stringify(options) : undefined;
+          const raw = await __fetch__.apply(undefined, [url, optionsJson], { result: { promise: true, copy: true } });
+          const res = JSON.parse(raw);
+          res.json = function() { return JSON.parse(res.text); };
+          return res;
         },
         log: (level, message) => {
           __log__(level, message);

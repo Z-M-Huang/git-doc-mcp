@@ -37,6 +37,7 @@ vi.mock('isolated-vm', () => ({
   default: {
     Isolate: vi.fn(() => mockIsolate),
     Callback: vi.fn((fn: Function) => fn),
+    Reference: vi.fn((fn: Function) => fn),
     ExternalCopy: vi.fn((val: unknown) => ({
       copyInto: () => val,
     })),
@@ -301,25 +302,24 @@ describe('executeAction', () => {
     expect(logger).toHaveBeenCalledWith('info', '[test] test message');
   });
 
-  it('should provide fetchCallback with json() method returning parsed JSON (AC3)', async () => {
+  it('should provide fetchCallback that returns JSON string with response data (AC3)', async () => {
     // Mock global fetch to return a JSON response
     mockFetch.mockResolvedValue(new Response('{"key":"value"}', {
       status: 200,
       headers: { 'content-type': 'application/json' },
     }));
 
-    let jsonResult: unknown;
+    let parsedResult: { ok: boolean; status: number; text: string };
 
     mockScript.run.mockImplementation(async () => {
-      const fetchFn = capturedGlobals['_fetch'] as (url: string, opts: Record<string, unknown>) => Promise<{
-        ok: boolean;
-        status: number;
-        text: string;
-        json: () => unknown;
-      }>;
-      const result = await fetchFn('https://example.com/data', {});
-      // json() should return parsed JSON
-      jsonResult = result.json();
+      // fetchCallback now takes (url, optionsJson?) and returns a JSON string
+      const fetchFn = capturedGlobals['_fetch'] as (url: string, optionsJson?: string) => Promise<string>;
+      const jsonStr = await fetchFn('https://example.com/data', '{}');
+      parsedResult = JSON.parse(jsonStr);
+      // Verify json() works when reconstructed (as the isolate wrapper does)
+      const jsonResult = JSON.parse(parsedResult.text);
+
+      expect(jsonResult).toEqual({ key: 'value' });
 
       const resolve = capturedGlobals['_resolve'] as Function;
       resolve({ content: [{ type: 'text', text: 'ok' }] });
@@ -331,10 +331,11 @@ describe('executeAction', () => {
       contextOptions,
     );
 
-    expect(jsonResult).toEqual({ key: 'value' });
+    expect(parsedResult!.ok).toBe(true);
+    expect(parsedResult!.status).toBe(200);
   });
 
-  it('should throw SyntaxError when json() called on non-JSON response (AC4)', async () => {
+  it('should throw SyntaxError when parsing non-JSON response text (AC4)', async () => {
     // Mock global fetch to return a non-JSON response
     mockFetch.mockResolvedValue(new Response('not valid json', {
       status: 200,
@@ -343,15 +344,11 @@ describe('executeAction', () => {
     let jsonError: unknown;
 
     mockScript.run.mockImplementation(async () => {
-      const fetchFn = capturedGlobals['_fetch'] as (url: string, opts: Record<string, unknown>) => Promise<{
-        ok: boolean;
-        status: number;
-        text: string;
-        json: () => unknown;
-      }>;
-      const result = await fetchFn('https://example.com/data', {});
+      const fetchFn = capturedGlobals['_fetch'] as (url: string, optionsJson?: string) => Promise<string>;
+      const jsonStr = await fetchFn('https://example.com/data', '{}');
+      const result = JSON.parse(jsonStr);
       try {
-        result.json();
+        JSON.parse(result.text); // This is what json() does in the isolate wrapper
       } catch (err) {
         jsonError = err;
       }
