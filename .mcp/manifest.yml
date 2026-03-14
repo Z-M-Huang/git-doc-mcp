@@ -1,0 +1,235 @@
+schemaVersion: "1.0"
+name: git-doc-mcp-docs
+version: 1.0.0
+description: |
+  Documentation assistant for git-doc-mcp.
+  Browse guides, search documentation, and get examples for creating
+  your own MCP servers with git-doc-mcp manifests.
+
+instructions: |
+  You are a documentation assistant for git-doc-mcp, a declarative MCP manifest system.
+  Use these tools to help users create their own MCP servers.
+
+  Workflow:
+  1. Start with list_topics to show the user what documentation is available.
+  2. Use get_guide to fetch specific documentation pages.
+  3. Use search_docs when the user asks a question — find relevant guides automatically.
+  4. Use get_example to show complete, working manifest and action examples.
+  5. Use get_action_api for quick reference on the ctx API (fetch, getSecret, log).
+
+  When helping create a manifest:
+  - First fetch the Manifest-Reference guide for schema details
+  - Then fetch Writing-Actions for the ctx API
+  - Show relevant examples with get_example
+
+  When troubleshooting:
+  - Fetch the Troubleshooting guide first
+  - Then search for the specific error or issue
+
+secrets:
+  - name: GITHUB_TOKEN
+    description: "GitHub token for accessing wiki content (optional, for private wikis or higher rate limits)"
+    scope:
+      - "https://raw.githubusercontent.com/*"
+    required: false
+
+tools:
+  - name: list_topics
+    title: List Documentation Topics
+    description: |
+      List all available documentation topics for git-doc-mcp.
+      Optionally filter by tag to find specific categories.
+      Available tags: quickstart, reference, actions, tools, resources, prompts,
+      secrets, security, cli, best-practices, examples, troubleshooting.
+      Use this first to discover what documentation is available.
+    inputSchema:
+      type: object
+      properties:
+        tag:
+          type: string
+          description: "Filter topics by tag (e.g., 'reference', 'quickstart', 'security', 'examples')"
+    action: https://raw.githubusercontent.com/Z-M-Huang/git-doc-mcp/main/.mcp/actions/list-topics.v1.js
+    actionHash: "sha256:79afaf18a06789239411453db8d02de4874cc83ab8a09eceb6c9b46e020caa75"
+    annotations:
+      readOnlyHint: true
+      destructiveHint: false
+      idempotentHint: true
+      openWorldHint: true
+
+  - name: get_guide
+    title: Get Documentation Guide
+    description: |
+      Fetch a specific documentation guide by topic slug.
+      Returns the full markdown content of the guide.
+      Use list_topics first to discover available topic slugs.
+      Common slugs: Getting-Started, Manifest-Reference, Writing-Actions,
+      Defining-Tools, Managing-Secrets, CLI-Reference, Best-Practices, Examples.
+    inputSchema:
+      type: object
+      properties:
+        topic:
+          type: string
+          description: "Topic slug (e.g., 'Getting-Started', 'Manifest-Reference', 'Writing-Actions')"
+      required: [topic]
+    action: https://raw.githubusercontent.com/Z-M-Huang/git-doc-mcp/main/.mcp/actions/get-guide.v1.js
+    actionHash: "sha256:0b90f6f1854f4cd22b16f9c27788c6a25ae03e19cbd4bcc027536789393989d4"
+    annotations:
+      readOnlyHint: true
+      destructiveHint: false
+      idempotentHint: true
+      openWorldHint: true
+
+  - name: search_docs
+    title: Search Documentation
+    description: |
+      Search across all git-doc-mcp documentation by keyword.
+      Finds matching topics by searching titles, descriptions, and tags,
+      then fetches and returns the full content of matching pages.
+      Use this when the user asks a question and you need to find relevant guides.
+    inputSchema:
+      type: object
+      properties:
+        query:
+          type: string
+          description: "Search keyword(s) (e.g., 'secret scope', 'input schema', 'SSRF')"
+        max_results:
+          type: number
+          description: "Maximum number of results to return (default: 3, max: 5)"
+      required: [query]
+    action: https://raw.githubusercontent.com/Z-M-Huang/git-doc-mcp/main/.mcp/actions/search-docs.v1.js
+    actionHash: "sha256:8190d80004598492ac4a0f709b00f23882ec0e7c5ae5f06c77d26ebf289a9d06"
+    annotations:
+      readOnlyHint: true
+      destructiveHint: false
+      idempotentHint: false
+      openWorldHint: true
+
+  - name: get_example
+    title: Get Example
+    description: |
+      Fetch a specific complete working example from the Examples page.
+      Each example includes a full manifest and action scripts.
+      Available examples: github-repo-tools, documentation-server,
+      rest-api-wrapper, multi-source-aggregator, static-knowledge-base.
+    inputSchema:
+      type: object
+      properties:
+        name:
+          type: string
+          description: "Example name (e.g., 'github-repo-tools', 'documentation-server', 'rest-api-wrapper')"
+      required: [name]
+    action: https://raw.githubusercontent.com/Z-M-Huang/git-doc-mcp/main/.mcp/actions/get-example.v1.js
+    actionHash: "sha256:5d5c3328172294f79326e41b980ca262d89bdcb1b0d1af8f084e7702ddd10ab7"
+    annotations:
+      readOnlyHint: true
+      destructiveHint: false
+      idempotentHint: true
+      openWorldHint: true
+
+  - name: get_action_api
+    title: Get Action API Reference
+    description: |
+      Fetch the action scripting API reference (ctx object documentation).
+      Optionally get a specific section by matching level-2 headings.
+      Available sections: ctx.fetch, ctx.getSecret, ctx.log, ctx.manifest,
+      Return Format, Sandbox Constraints, Patterns, Versioning Actions.
+      Use this when helping users write action scripts.
+    inputSchema:
+      type: object
+      properties:
+        section:
+          type: string
+          description: "Specific section to fetch (e.g., 'ctx.fetch', 'ctx.getSecret', 'Return Format', 'Patterns'). Omit for full reference."
+    action: https://raw.githubusercontent.com/Z-M-Huang/git-doc-mcp/main/.mcp/actions/get-action-api.v1.js
+    actionHash: "sha256:65b49cb0416ea39ff069e08de8eee3fa8e20604e28c0f3aaeb06406207c6fe9e"
+    annotations:
+      readOnlyHint: true
+      destructiveHint: false
+      idempotentHint: true
+      openWorldHint: true
+
+resources:
+  - name: getting-started
+    uri: https://raw.githubusercontent.com/wiki/Z-M-Huang/git-doc-mcp/Getting-Started.md
+    description: Quick start guide — create your first MCP server in 5 minutes
+    mimeType: text/markdown
+
+  - name: manifest-reference
+    uri: https://raw.githubusercontent.com/wiki/Z-M-Huang/git-doc-mcp/Manifest-Reference.md
+    description: Complete manifest.yml schema reference with all fields and options
+    mimeType: text/markdown
+
+  - name: project-readme
+    uri: https://raw.githubusercontent.com/Z-M-Huang/git-doc-mcp/main/README.md
+    description: Project README with overview and quick setup
+    mimeType: text/markdown
+
+prompts:
+  - name: create-manifest
+    title: Create a Manifest
+    description: Guided workflow for creating a new git-doc-mcp manifest from scratch
+    args:
+      - name: project_name
+        description: Name for the MCP server (e.g., "my-api-tools")
+        required: true
+      - name: description
+        description: What the MCP server will do
+        required: false
+    messages:
+      - role: user
+        content:
+          type: resource
+          resource:
+            uri: https://raw.githubusercontent.com/wiki/Z-M-Huang/git-doc-mcp/Manifest-Reference.md
+            mimeType: text/markdown
+      - role: user
+        content:
+          type: text
+          text: |
+            Based on the manifest reference above, help me create a new git-doc-mcp manifest.
+
+            Project name: {{project_name}}
+            Description: {{description}}
+
+            Walk me through:
+            1. The basic manifest structure (schemaVersion, name, version)
+            2. Defining my tools with appropriate input schemas
+            3. Adding secrets if my tools need API authentication
+            4. Setting up resources and prompts if useful
+            5. Writing the action scripts for each tool
+
+            Generate the complete manifest.yml and action scripts.
+
+  - name: create-action
+    title: Create an Action Script
+    description: Guided workflow for writing a new action script
+    args:
+      - name: tool_name
+        description: Name of the tool this action implements
+        required: true
+      - name: api_base_url
+        description: Base URL of the API the action will call (if any)
+        required: false
+    messages:
+      - role: user
+        content:
+          type: resource
+          resource:
+            uri: https://raw.githubusercontent.com/wiki/Z-M-Huang/git-doc-mcp/Writing-Actions.md
+            mimeType: text/markdown
+      - role: user
+        content:
+          type: text
+          text: |
+            Based on the action scripting reference above, help me write an action script.
+
+            Tool name: {{tool_name}}
+            API base URL: {{api_base_url}}
+
+            Generate a complete action script that:
+            1. Exports a default async function
+            2. Uses ctx.fetch for HTTP requests with proper error handling
+            3. Uses ctx.getSecret for authentication (if API URL provided)
+            4. Uses ctx.log for meaningful logging
+            5. Returns properly formatted content
+            6. Handles all error cases gracefully
