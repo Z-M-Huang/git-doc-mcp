@@ -163,10 +163,13 @@ export const ManifestSchema = z.object({
   description: z.string().optional(),
   instructions: z.string().optional(),
   secrets: z.array(SecretSchema).optional(),
-  tools: z.array(ToolSchema).min(1),
+  tools: z.array(ToolSchema).optional(),
   resources: z.array(ResourceSchema).optional(),
   prompts: z.array(PromptSchema).optional(),
-});
+}).refine(
+  (m) => (m.tools?.length ?? 0) + (m.resources?.length ?? 0) + (m.prompts?.length ?? 0) > 0,
+  { message: 'Manifest must define at least one tool, resource, or prompt' }
+);
 
 /**
  * Parsed manifest type.
