@@ -4,7 +4,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { ManifestSchema, ToolSchema, SecretSchema, PromptSchema } from '../../manifest/schema.js';
+import { ManifestSchema, ToolSchema, SecretSchema, PromptSchema, ResourceSchema } from '../../manifest/schema.js';
 
 describe('ManifestSchema', () => {
   describe('valid manifests', () => {
@@ -183,6 +183,148 @@ describe('ToolSchema', () => {
     };
 
     expect(() => ToolSchema.parse(tool)).toThrow();
+  });
+
+  it('should accept relative file path for action', () => {
+    const tool = {
+      name: 'test',
+      description: 'Test tool',
+      inputSchema: { type: 'object', properties: {} },
+      action: './actions/echo.js',
+      actionHash: 'sha256:0000000000000000000000000000000000000000000000000000000000000000',
+    };
+
+    const result = ToolSchema.parse(tool);
+    expect(result.action).toBe('./actions/echo.js');
+  });
+
+  it('should accept absolute file path for action', () => {
+    const tool = {
+      name: 'test',
+      description: 'Test tool',
+      inputSchema: { type: 'object', properties: {} },
+      action: '/home/user/actions/echo.js',
+      actionHash: 'sha256:0000000000000000000000000000000000000000000000000000000000000000',
+    };
+
+    const result = ToolSchema.parse(tool);
+    expect(result.action).toBe('/home/user/actions/echo.js');
+  });
+
+  it('should accept relative path without dot prefix for action', () => {
+    const tool = {
+      name: 'test',
+      description: 'Test tool',
+      inputSchema: { type: 'object', properties: {} },
+      action: 'actions/echo.js',
+      actionHash: 'sha256:0000000000000000000000000000000000000000000000000000000000000000',
+    };
+
+    const result = ToolSchema.parse(tool);
+    expect(result.action).toBe('actions/echo.js');
+  });
+
+  it('should reject ftp:// scheme for action', () => {
+    const tool = {
+      name: 'test',
+      description: 'Test tool',
+      inputSchema: { type: 'object', properties: {} },
+      action: 'ftp://example.com/action.js',
+      actionHash: 'sha256:0000000000000000000000000000000000000000000000000000000000000000',
+    };
+
+    expect(() => ToolSchema.parse(tool)).toThrow();
+  });
+
+  it('should reject data: URI for action', () => {
+    const tool = {
+      name: 'test',
+      description: 'Test tool',
+      inputSchema: { type: 'object', properties: {} },
+      action: 'data:text/javascript,console.log("hi")',
+      actionHash: 'sha256:0000000000000000000000000000000000000000000000000000000000000000',
+    };
+
+    expect(() => ToolSchema.parse(tool)).toThrow();
+  });
+
+  it('should reject mailto: URI for action', () => {
+    const tool = {
+      name: 'test',
+      description: 'Test tool',
+      inputSchema: { type: 'object', properties: {} },
+      action: 'mailto:test@example.com',
+      actionHash: 'sha256:0000000000000000000000000000000000000000000000000000000000000000',
+    };
+
+    expect(() => ToolSchema.parse(tool)).toThrow();
+  });
+
+  it('should reject javascript: URI for action', () => {
+    const tool = {
+      name: 'test',
+      description: 'Test tool',
+      inputSchema: { type: 'object', properties: {} },
+      action: 'javascript:alert(1)',
+      actionHash: 'sha256:0000000000000000000000000000000000000000000000000000000000000000',
+    };
+
+    expect(() => ToolSchema.parse(tool)).toThrow();
+  });
+
+  it('should reject blob: URI for action', () => {
+    const tool = {
+      name: 'test',
+      description: 'Test tool',
+      inputSchema: { type: 'object', properties: {} },
+      action: 'blob:https://example.com/123',
+      actionHash: 'sha256:0000000000000000000000000000000000000000000000000000000000000000',
+    };
+
+    expect(() => ToolSchema.parse(tool)).toThrow();
+  });
+
+  it('should reject file: URI for action', () => {
+    const tool = {
+      name: 'test',
+      description: 'Test tool',
+      inputSchema: { type: 'object', properties: {} },
+      action: 'file:///etc/passwd',
+      actionHash: 'sha256:0000000000000000000000000000000000000000000000000000000000000000',
+    };
+
+    expect(() => ToolSchema.parse(tool)).toThrow();
+  });
+});
+
+describe('ResourceSchema', () => {
+  it('should accept HTTPS URL for resource uri', () => {
+    const resource = {
+      name: 'readme',
+      uri: 'https://example.com/README.md',
+    };
+
+    const result = ResourceSchema.parse(resource);
+    expect(result.uri).toBe('https://example.com/README.md');
+  });
+
+  it('should accept local file path for resource uri', () => {
+    const resource = {
+      name: 'readme',
+      uri: './docs/README.md',
+    };
+
+    const result = ResourceSchema.parse(resource);
+    expect(result.uri).toBe('./docs/README.md');
+  });
+
+  it('should reject ftp:// scheme for resource uri', () => {
+    const resource = {
+      name: 'readme',
+      uri: 'ftp://example.com/README.md',
+    };
+
+    expect(() => ResourceSchema.parse(resource)).toThrow();
   });
 });
 

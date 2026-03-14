@@ -6,6 +6,26 @@
 import { z } from 'zod';
 
 /**
+ * Accept HTTP(S) URLs or file paths. Reject other URL schemes (ftp://, data:, mailto:, etc.).
+ * Strategy: if it parses as a URL with a non-http(s) scheme, reject it.
+ * Windows drive-letter paths (C:\...) don't parse as URLs, so they pass through.
+ */
+function isUrlOrPath(val: string): boolean {
+  if (val.startsWith('http://') || val.startsWith('https://')) {
+    try { new URL(val); return true; } catch { return false; }
+  }
+  // Reject anything that parses as a URL with any other scheme
+  try {
+    const parsed = new URL(val);
+    // If it parsed successfully with a non-http(s) scheme, reject it
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return false;
+  } catch {
+    // Not a valid URL — treat as file path (this is the common case for paths)
+  }
+  return true;
+}
+
+/**
  * Schema version for future compatibility.
  */
 export const SchemaVersionSchema = z.string().regex(/^\d+\.\d+$/);
@@ -58,7 +78,7 @@ export const ToolSchema = z.object({
   title: z.string().optional(),
   description: z.string().min(1),
   inputSchema: InputSchemaSchema,
-  action: z.string().url(),
+  action: z.string().min(1).refine(isUrlOrPath, { message: 'Must be an HTTP(S) URL or a file path' }),
   actionHash: z.string().regex(/^sha256:[a-f0-9]{64}$/),
   annotations: ToolAnnotationsSchema.optional(),
 });
@@ -68,7 +88,7 @@ export const ToolSchema = z.object({
  */
 export const ResourceSchema = z.object({
   name: z.string().min(1),
-  uri: z.string().url(),
+  uri: z.string().min(1).refine(isUrlOrPath, { message: 'Must be an HTTP(S) URL or a file path' }),
   description: z.string().optional(),
   mimeType: z.string().optional(),
 });

@@ -7,12 +7,14 @@ import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import * as os from 'node:os';
 import * as crypto from 'node:crypto';
+import * as url from 'node:url';
 import {
   loadManifest,
   createMcpServer,
   startMcpServer,
   SecretsManager,
   fetchContent,
+  loadLocalContent,
   verifyHash,
   WorkerManager,
   Manifest,
@@ -20,6 +22,14 @@ import {
   createAuditLogger,
   RateLimiter,
 } from '../../index.js';
+
+function isHttpUrl(val: string): boolean {
+  return val.startsWith('http://') || val.startsWith('https://');
+}
+
+function resolveLocalPath(relativePath: string, baseDir: string): string {
+  return path.isAbsolute(relativePath) ? relativePath : path.resolve(baseDir, relativePath);
+}
 
 /**
  * Serve command options.
@@ -111,6 +121,11 @@ export async function serveCommand(options: ServeOptions): Promise<void> {
 
   const { manifest } = manifestResult;
 
+  // Compute base directory for resolving relative paths in manifest
+  const manifestBaseDir = isHttpUrl(manifestResult.source)
+    ? undefined
+    : path.dirname(manifestResult.source);
+
   // Setup secrets manager
   const secretsManager = new SecretsManager();
 
@@ -154,9 +169,33 @@ export async function serveCommand(options: ServeOptions): Promise<void> {
   // Action cache
   const actionCache = new Map<string, string>();
 
+  // Reject local action paths in remote manifests eagerly at startup
+  for (const tool of manifest.tools ?? []) {
+    if (!isHttpUrl(tool.action) && !manifestBaseDir) {
+      console.error(`Error: Local file paths require a local manifest. Cannot resolve action: ${tool.action}`);
+      process.exit(1);
+    }
+  }
+
+  // Resolve local resource URIs to file:// for MCP SDK registration
+  const localResourcePaths = new Map<string, string>();
+  const resolvedManifest = { ...manifest };
+  if (manifest.resources) {
+    resolvedManifest.resources = manifest.resources.map(r => {
+      if (isHttpUrl(r.uri)) return r;
+      if (!manifestBaseDir) {
+        throw new Error(`Local file paths require a local manifest. Cannot resolve: ${r.uri}`);
+      }
+      const absPath = resolveLocalPath(r.uri, manifestBaseDir);
+      const fileUri = url.pathToFileURL(absPath).href;
+      localResourcePaths.set(fileUri, absPath);
+      return { ...r, uri: fileUri };
+    });
+  }
+
   // Create MCP server
   const server = createMcpServer({
-    manifest,
+    manifest: resolvedManifest,
     onToolCall: async (name, input) => {
       // Rate limit check
       if (rateLimiter && !rateLimiter.tryAcquire()) {
@@ -185,20 +224,33 @@ export async function serveCommand(options: ServeOptions): Promise<void> {
         const startTime = Date.now();
 
         // Get or fetch action code
-        let actionCode = actionCache.get(tool.action);
-        if (!actionCode) {
-          console.error(`Fetching action: ${tool.action}`);
-          const result = await fetchContent(tool.action, {
-            headers: actionHeaders,
-            auditLogger,
-            allowHttp,
-          });
-
-          // Verify hash
+        let actionCode: string;
+        if (isHttpUrl(tool.action)) {
+          // Remote action — cache and verify hash (existing behavior)
+          const cached = actionCache.get(tool.action);
+          if (cached) {
+            actionCode = cached;
+          } else {
+            console.error(`Fetching action: ${tool.action}`);
+            const result = await fetchContent(tool.action, {
+              headers: actionHeaders,
+              auditLogger,
+              allowHttp,
+            });
+            verifyHash(result.content, tool.actionHash);
+            actionCode = result.content;
+            actionCache.set(tool.action, actionCode);
+          }
+        } else {
+          // Local action — read from disk each time (no cache, so edits are picked up)
+          if (!manifestBaseDir) {
+            throw new Error(`Local file paths require a local manifest. Cannot resolve: ${tool.action}`);
+          }
+          const filePath = resolveLocalPath(tool.action, manifestBaseDir);
+          console.error(`Loading local action: ${filePath}`);
+          const result = await loadLocalContent(filePath, { auditLogger });
           verifyHash(result.content, tool.actionHash);
-
           actionCode = result.content;
-          actionCache.set(tool.action, actionCode);
         }
 
         // Execute in worker
@@ -240,23 +292,26 @@ export async function serveCommand(options: ServeOptions): Promise<void> {
         };
       }
     },
-    onResourceRead: manifest.resources ? async (uri) => {
-      const resource = manifest.resources?.find((r) => r.uri === uri);
+    onResourceRead: resolvedManifest.resources ? async (uri) => {
+      const resource = resolvedManifest.resources?.find((r) => r.uri === uri);
       if (!resource) {
         throw new Error(`Resource not found: ${uri}`);
       }
 
       try {
-        // Validate resource URI against SSRF (AC19)
+        const localPath = localResourcePaths.get(uri);
+        if (localPath) {
+          const result = await loadLocalContent(localPath, { auditLogger });
+          return result.content;
+        }
+        // HTTP(S) resource — existing behavior
         const resourceSchemes = allowHttp ? ['https', 'http'] : ['https'];
         await validateUrl(resource.uri, { allowedSchemes: resourceSchemes });
-
         const response = await fetchContent(resource.uri, {
           headers: resourceHeaders,
           auditLogger,
           allowHttp,
         });
-
         return response.content;
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);

@@ -214,12 +214,14 @@ cd packages/core && npm run test:watch
 
 ### SSRF Protection
 
-All URLs are validated before fetch:
+All HTTP(S) URLs are validated before fetch:
 - HTTPS-only by default (`--allow-http` to override)
 - Private IP ranges blocked (10.x, 172.16-31.x, 192.168.x, localhost)
 - DNS resolution validated
 - Every redirect URL re-validated
 - Cross-origin redirects strip Authorization/Cookie headers
+- Local file paths in `action` and `resource.uri` are read directly from disk (not subject to SSRF validation)
+- `ctx.fetch` inside action scripts remains HTTP(S)-only regardless of action source
 
 ### Secret Scoping
 

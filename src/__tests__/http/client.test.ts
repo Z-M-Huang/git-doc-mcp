@@ -12,7 +12,10 @@ vi.mock('node:dns/promises', () => ({ lookup: mockLookup }));
 const mockFetch = vi.fn();
 vi.stubGlobal('fetch', mockFetch);
 
-import { fetchContent, verifyHash } from '../../http/client.js';
+import { fetchContent, loadLocalContent, verifyHash } from '../../http/client.js';
+import * as fs from 'node:fs/promises';
+import * as os from 'node:os';
+import * as path from 'node:path';
 
 function createMockResponse(body: string, init: ResponseInit & { headers?: Record<string, string> } = {}): Response {
   const headers = new Headers(init.headers);
@@ -201,6 +204,36 @@ describe('fetchContent', () => {
     mockFetch.mockResolvedValue(createMockResponse('console.log("hello");'));
     const result = await fetchContent('http://example.com/action.js', { allowHttp: true });
     expect(result.content).toBe('console.log("hello");');
+  });
+});
+
+describe('loadLocalContent', () => {
+  let tmpDir: string;
+
+  beforeEach(async () => {
+    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'git-doc-mcp-test-'));
+  });
+
+  it('should read file and return content with hash', async () => {
+    const filePath = path.join(tmpDir, 'action.js');
+    await fs.writeFile(filePath, 'console.log("hello");');
+
+    const result = await loadLocalContent(filePath);
+    expect(result.content).toBe('console.log("hello");');
+    expect(result.hash).toMatch(/^sha256:[0-9a-f]{64}$/);
+  });
+
+  it('should reject file exceeding maxSize', async () => {
+    const filePath = path.join(tmpDir, 'large.js');
+    await fs.writeFile(filePath, 'x'.repeat(2048));
+
+    await expect(loadLocalContent(filePath, { maxSize: 1024 }))
+      .rejects.toThrow(/too large/i);
+  });
+
+  it('should throw on missing file', async () => {
+    await expect(loadLocalContent(path.join(tmpDir, 'nonexistent.js')))
+      .rejects.toThrow();
   });
 });
 

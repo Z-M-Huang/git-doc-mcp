@@ -4,6 +4,7 @@
  */
 
 import * as crypto from 'node:crypto';
+import * as fs from 'node:fs/promises';
 import { validateUrl, validateRedirect } from '../sandbox/url-validator.js';
 import type { AuditLogger } from '../audit/logger.js';
 import { stripCrossOriginHeaders } from './redirect-utils.js';
@@ -154,6 +155,28 @@ export async function fetchContent(
   } finally {
     clearTimeout(timeoutId);
   }
+}
+
+/**
+ * Load content from a local file path.
+ * Returns the same FetchResult shape as fetchContent for uniform handling.
+ */
+export async function loadLocalContent(
+  filePath: string,
+  options?: { maxSize?: number; auditLogger?: AuditLogger }
+): Promise<FetchResult> {
+  const maxSize = options?.maxSize ?? DEFAULT_OPTIONS.maxSize;
+  const content = await fs.readFile(filePath, 'utf-8');
+
+  if (content.length > maxSize) {
+    options?.auditLogger?.logError('Local file too large', {
+      path: filePath, size: content.length, maxSize,
+    });
+    throw new Error(`Content too large: ${content.length} bytes (max: ${maxSize})`);
+  }
+
+  const hash = 'sha256:' + crypto.createHash('sha256').update(content).digest('hex');
+  return { content, hash };
 }
 
 /**

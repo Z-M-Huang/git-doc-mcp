@@ -68,11 +68,21 @@ tools:
       properties:
         path: { type: string }
       required: [path]
-    action: https://example.com/.mcp/actions/fetch-file.v1.js
+    action: https://example.com/.mcp/actions/fetch-file.v1.js  # URL or local path
     actionHash: "sha256:..."
     annotations:
       readOnlyHint: true
       openWorldHint: true
+```
+
+Actions can reference **HTTP(S) URLs** or **local file paths** (relative to the manifest file's directory):
+
+```yaml
+# Remote action (hosted)
+action: https://raw.githubusercontent.com/owner/repo/main/.mcp/actions/fetch-file.v1.js
+
+# Local action (for development)
+action: ./actions/fetch-file.v1.js
 ```
 
 ## Try It — Live Demo
@@ -166,8 +176,11 @@ npx git-doc-mcp --manifest https://private.example.com/.mcp/manifest.yml \
 ### Local Development
 
 ```bash
+# Manifest and action scripts can all be local files
 npx git-doc-mcp --manifest ./path/to/manifest.yml
 ```
+
+When using a local manifest, `action` and `resource.uri` fields can reference local files with paths relative to the manifest's directory. Local actions are re-read from disk on each tool call, so edits take effect without restarting the server.
 
 ### With Pre-approved Secrets
 
@@ -221,8 +234,8 @@ tools:                         # Required - at least one tool
       properties:
         path: { type: string }
       required: [path]
-    action: https://...        # Required - URL to action script
-    actionHash: sha256:...     # Required - SHA-256 hash
+    action: https://...        # Required - URL or local file path to action script
+    actionHash: sha256:...     # Required - SHA-256 hash of action content
     annotations:               # Optional - hints for AI
       readOnlyHint: true
       destructiveHint: false
@@ -231,7 +244,7 @@ tools:                         # Required - at least one tool
 
 resources:                     # Optional - static resources
   - name: readme
-    uri: https://...
+    uri: https://...           # URL or local file path
     description: README
     mimeType: text/markdown
 
@@ -447,12 +460,14 @@ Layer 3: Controlled API Surface
 
 ### SSRF Protection
 
-All URLs are validated before fetch:
+All HTTP(S) URLs are validated before fetch:
 - HTTPS-only by default (use `--allow-http` to override)
 - Private IP ranges blocked (10.x, 172.16-31.x, 192.168.x, localhost)
 - DNS resolution validated before connection
 - Every redirect URL re-validated
 - Cross-origin redirects strip sensitive headers (Authorization, Cookie)
+
+Local file paths in `action` and `resource.uri` are read directly from disk and are not subject to SSRF validation. `ctx.fetch` inside action scripts remains HTTP(S)-only regardless of how the action was loaded.
 
 ### Capability-Scoped Secrets
 
