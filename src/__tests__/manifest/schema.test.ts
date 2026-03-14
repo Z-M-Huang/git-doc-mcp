@@ -123,14 +123,66 @@ describe('ManifestSchema', () => {
       expect(() => ManifestSchema.parse(manifest)).toThrow();
     });
 
-    it('should reject manifest without tools', () => {
+    it('should reject manifest with no tools, resources, or prompts', () => {
       const manifest = {
         schemaVersion: '1.0',
         name: 'test-mcp',
         version: '1.0.0',
       };
 
-      expect(() => ManifestSchema.parse(manifest)).toThrow();
+      expect(() => ManifestSchema.parse(manifest)).toThrow(/at least one/);
+    });
+  });
+
+  describe('resource-only and prompt-only manifests', () => {
+    it('should accept manifest with only resources (no tools)', () => {
+      const manifest = {
+        schemaVersion: '1.0',
+        name: 'docs-only',
+        version: '1.0.0',
+        resources: [{
+          name: 'readme',
+          uri: 'https://example.com/README.md',
+          mimeType: 'text/markdown',
+        }],
+      };
+
+      const result = ManifestSchema.parse(manifest);
+      expect(result.tools).toBeUndefined();
+      expect(result.resources).toHaveLength(1);
+    });
+
+    it('should accept manifest with only prompts (no tools)', () => {
+      const manifest = {
+        schemaVersion: '1.0',
+        name: 'prompts-only',
+        version: '1.0.0',
+        prompts: [{
+          name: 'explain',
+          description: 'Explain code',
+        }],
+      };
+
+      const result = ManifestSchema.parse(manifest);
+      expect(result.tools).toBeUndefined();
+      expect(result.prompts).toHaveLength(1);
+    });
+
+    it('should accept manifest with local resource paths (no tools)', () => {
+      const manifest = {
+        schemaVersion: '1.0',
+        name: 'local-docs',
+        version: '1.0.0',
+        instructions: 'Browse these resources to understand the project',
+        resources: [
+          { name: 'overview', uri: '../README.md', mimeType: 'text/markdown' },
+          { name: 'api-docs', uri: '../src/api/README.md', mimeType: 'text/markdown' },
+        ],
+      };
+
+      const result = ManifestSchema.parse(manifest);
+      expect(result.tools).toBeUndefined();
+      expect(result.resources).toHaveLength(2);
     });
   });
 });

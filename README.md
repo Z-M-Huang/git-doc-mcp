@@ -225,7 +225,7 @@ secrets:                       # Optional - secrets needed
       - "https://api.github.com/*"
     required: false
 
-tools:                         # Required - at least one tool
+tools:                         # Optional - tool definitions
   - name: fetch-file
     title: Fetch File          # Optional - human-readable title
     description: Fetch a file  # Required
