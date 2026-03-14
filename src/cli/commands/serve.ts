@@ -19,7 +19,7 @@ import {
   validateUrl,
   createAuditLogger,
   RateLimiter,
-} from '@git-doc-mcp/core';
+} from '../../index.js';
 
 /**
  * Serve command options.

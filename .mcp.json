@@ -3,7 +3,7 @@
     "git-doc-mcp-docs": {
       "command": "node",
       "args": [
-        "packages/cli/dist/index.js",
+        "dist/cli/index.js",
         "--manifest",
         ".mcp/manifest.yml",
         "--trust-changed",
