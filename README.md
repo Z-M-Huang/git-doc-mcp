@@ -75,6 +75,56 @@ tools:
       openWorldHint: true
 ```
 
+## Try It — Live Demo
+
+This project uses its own manifest system to serve documentation. Add it to your AI tool to see git-doc-mcp in action:
+
+**Claude Code** — add to your project's `.mcp.json`:
+
+```json
+{
+  "mcpServers": {
+    "git-doc-mcp-docs": {
+      "command": "npx",
+      "args": [
+        "git-doc-mcp",
+        "--manifest",
+        "https://raw.githubusercontent.com/Z-M-Huang/git-doc-mcp/main/.mcp/manifest.yml"
+      ]
+    }
+  }
+}
+```
+
+**Claude Desktop** — add to `~/.claude/claude_desktop_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "git-doc-mcp-docs": {
+      "command": "npx",
+      "args": [
+        "git-doc-mcp",
+        "--manifest",
+        "https://raw.githubusercontent.com/Z-M-Huang/git-doc-mcp/main/.mcp/manifest.yml"
+      ]
+    }
+  }
+}
+```
+
+This gives you 5 tools, 3 resources, and 2 prompts that fetch documentation from the [project wiki](https://github.com/Z-M-Huang/git-doc-mcp/wiki):
+
+| Tool | Description |
+|------|-------------|
+| `list_topics` | Browse documentation topics, filter by tag |
+| `get_guide` | Fetch a specific guide (e.g., Getting-Started, Manifest-Reference) |
+| `search_docs` | Search across all documentation by keyword |
+| `get_example` | Get complete working examples (GitHub tools, REST wrapper, etc.) |
+| `get_action_api` | Action scripting API reference (ctx.fetch, ctx.getSecret, etc.) |
+
+The [manifest source](.mcp/manifest.yml) and [action scripts](.mcp/actions/) serve as a reference for building your own.
+
 ## Installation
 
 ### npm
@@ -92,7 +142,7 @@ npx git-doc-mcp --manifest <url-or-path>
 ### Local Development
 
 ```bash
-git clone https://github.com/user/git-doc-mcp.git
+git clone https://github.com/Z-M-Huang/git-doc-mcp.git
 cd git-doc-mcp
 npm install
 npm run build
@@ -464,7 +514,7 @@ All `ctx.fetch` calls are logged to `~/.git-doc-mcp/logs/audit.jsonl`:
 ```bash
 npm install        # Install dependencies
 npm run build      # Build all packages
-npm test           # Run all tests (268 tests)
+npm test           # Run all tests (298 tests)
 ```
 
 ### Project Structure
@@ -476,6 +526,17 @@ git-doc-mcp/
     cli/           # CLI entry point and serve command
     template/      # Example manifest and actions
 ```
+
+## Documentation
+
+Full documentation is available on the [GitHub Wiki](https://github.com/Z-M-Huang/git-doc-mcp/wiki):
+
+- [Getting Started](https://github.com/Z-M-Huang/git-doc-mcp/wiki/Getting-Started) — Create your first MCP server
+- [Manifest Reference](https://github.com/Z-M-Huang/git-doc-mcp/wiki/Manifest-Reference) — Complete schema docs
+- [Writing Actions](https://github.com/Z-M-Huang/git-doc-mcp/wiki/Writing-Actions) — Action scripting API
+- [Examples](https://github.com/Z-M-Huang/git-doc-mcp/wiki/Examples) — Complete working examples
+- [Security Model](https://github.com/Z-M-Huang/git-doc-mcp/wiki/Security-Model) — Isolation architecture
+- [Troubleshooting](https://github.com/Z-M-Huang/git-doc-mcp/wiki/Troubleshooting) — Common issues
 
 ## License
 

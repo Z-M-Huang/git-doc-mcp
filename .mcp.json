@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "git-doc-mcp-docs": {
+      "command": "node",
+      "args": [
+        "packages/cli/dist/index.js",
+        "--manifest",
+        ".mcp/manifest.yml",
+        "--trust-changed",
+        "--rate-limit",
+        "0"
+      ]
+    }
+  }
+}
