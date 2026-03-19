@@ -29,7 +29,7 @@ import { createActionContext } from '../../sandbox/context.js';
 import { loadManifest } from '../../manifest/loader.js';
 import { fetchContent } from '../../http/client.js';
 
-const VALID_MANIFEST_YAML = `
+const _VALID_MANIFEST_YAML = `
 schemaVersion: "1.0"
 name: test
 version: "1.0.0"

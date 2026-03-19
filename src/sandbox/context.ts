@@ -116,7 +116,8 @@ export function createActionContext(options: CreateContextOptions): ActionContex
   const scopedFetch: ActionContext['fetch'] = async (url, init = {}) => {
     const maxSize = init.maxSize ?? maxResponseSize;
     // Remove maxSize from init before passing to native fetch
-    let { maxSize: _, ...fetchInit } = init;
+    const { maxSize: _maxSize, ...initWithoutMaxSize } = init; // eslint-disable-line @typescript-eslint/no-unused-vars
+    let fetchInit = initWithoutMaxSize;
 
     // Pre-fetch audit log: always fires as an attempt signal
     auditLogger?.logFetch(url, undefined, undefined, manifest.name);
@@ -181,17 +182,18 @@ export function createActionContext(options: CreateContextOptions): ActionContex
           let totalSize = 0;
 
           while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
+            const result = await reader.read();
+            if (result.done) break;
 
-            totalSize += value.length;
+            const chunk = result.value as Uint8Array;
+            totalSize += chunk.length;
             if (totalSize > maxSize) {
-              reader.cancel();
+              void reader.cancel();
               throw new Error(
                 `Response body too large: ${totalSize} bytes (max: ${maxSize})`
               );
             }
-            chunks.push(value);
+            chunks.push(chunk);
           }
 
           // Reconstruct response with the body

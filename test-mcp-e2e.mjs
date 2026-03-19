@@ -16,7 +16,7 @@ async function main() {
 
   test('List tools (5)', async () => { const r = await client.listTools(); console.log(`  ${r.tools.map(t=>t.name).join(', ')}`); if (r.tools.length !== 5) throw new Error(`got ${r.tools.length}`); });
   test('List resources (3)', async () => { const r = await client.listResources(); console.log(`  ${r.resources.map(t=>t.name).join(', ')}`); if (r.resources.length !== 3) throw new Error(`got ${r.resources.length}`); });
-  test('List prompts (2)', async () => { const r = await client.listPrompts(); console.log(`  ${r.prompts.map(t=>t.name).join(', ')}`); if (r.prompts.length !== 2) throw new Error(`got ${r.prompts.length}`); });
+  test('List prompts (3)', async () => { const r = await client.listPrompts(); console.log(`  ${r.prompts.map(t=>t.name).join(', ')}`); if (r.prompts.length !== 3) throw new Error(`got ${r.prompts.length}`); });
   test('list_topics', async () => { const r = await client.callTool({ name: 'list_topics', arguments: {} }); if (!r.content[0].text.includes('documentation topics')) throw new Error('bad'); console.log(`  OK ${r.content[0].text.length}b`); });
   test('get_guide', async () => { const r = await client.callTool({ name: 'get_guide', arguments: { topic: 'Getting-Started' } }); if (!r.content[0].text.includes('Getting Started')) throw new Error('bad'); console.log(`  OK ${r.content[0].text.length}b`); });
   test('search_docs', async () => { const r = await client.callTool({ name: 'search_docs', arguments: { query: 'secret scope' } }); if (r.content.length < 2) throw new Error(`${r.content.length} blocks`); console.log(`  OK ${r.content.length} blocks`); });

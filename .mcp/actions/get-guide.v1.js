@@ -50,7 +50,8 @@ export default async function getGuide(input, ctx) {
 
   log('info', `Fetched guide "${topic}" (${content.length} bytes)`);
 
+  var nextSteps = '\n\n---\n**Next steps:**\n- Call `search_docs` to find related topics\n- Call `get_example` for a complete working example\n- Call `get_action_api` if you need the ctx scripting reference';
   return {
-    content: [{ type: 'text', text: content }],
+    content: [{ type: 'text', text: content + nextSteps }],
   };
 }

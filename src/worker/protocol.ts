@@ -102,9 +102,9 @@ export function createPongResponse(id: string): WorkerResponse {
  */
 export function parseWorkerRequest(data: string): WorkerRequest | null {
   try {
-    const parsed = JSON.parse(data);
+    const parsed = JSON.parse(data) as Record<string, unknown>;
     if (typeof parsed.id === 'string' && typeof parsed.type === 'string') {
-      return parsed as WorkerRequest;
+      return parsed as unknown as WorkerRequest;
     }
     return null;
   } catch {

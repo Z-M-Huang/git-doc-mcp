@@ -117,7 +117,7 @@ export function transformActionCode(code: string): string {
         );
       } else {
         // Expression body: export default (input) => expr; → function __default__(input) { return expr; }
-        const beforeExport = code.slice(0, arrowMatch.index!);
+        const beforeExport = code.slice(0, arrowMatch.index);
         const expr = afterArrow.replace(/;\s*$/, '');
         transformed = beforeExport + `${isAsync}function __default__(${params}) { return ${expr}; }`;
       }
@@ -186,8 +186,8 @@ export async function executeAction(
     // via Reference.apply(), but strings transfer cleanly.
     const fetchCallback = async (url: string, optionsJson?: string) => {
       try {
-        const options = optionsJson ? JSON.parse(optionsJson) : {};
-        const response = await actionContext.fetch(url, options as RequestInit);
+        const options = optionsJson ? (JSON.parse(optionsJson) as RequestInit) : {};
+        const response = await actionContext.fetch(url, options);
         const text = await response.text();
         return JSON.stringify({
           ok: response.ok,

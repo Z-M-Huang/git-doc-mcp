@@ -40,8 +40,9 @@ export default async function getActionApi(input, ctx) {
   // If no section requested, return full page
   if (!section) {
     log('info', 'Returning full API reference (' + body.length + ' bytes)');
+    var nextSteps = '\n\n---\n**Next steps:**\n- Call `get_example` to see these APIs used in a complete working example\n- Call `get_guide` with "Manifest-Reference" for the manifest YAML schema';
     return {
-      content: [{ type: 'text', text: body }],
+      content: [{ type: 'text', text: body + nextSteps }],
     };
   }
 
@@ -83,7 +84,8 @@ export default async function getActionApi(input, ctx) {
 
   log('info', 'Returning section "' + section + '" (' + match.length + ' bytes)');
 
+  var sectionNextSteps = '\n\n---\n**Next steps:**\n- Omit the section parameter to get the full API reference\n- Call `get_example` to see this API used in a real example\n- Call `get_guide` with "Writing-Actions" for the complete action scripting guide';
   return {
-    content: [{ type: 'text', text: match }],
+    content: [{ type: 'text', text: match + sectionNextSteps }],
   };
 }

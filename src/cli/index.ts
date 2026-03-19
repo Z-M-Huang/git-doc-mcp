@@ -17,14 +17,14 @@
  */
 
 import { Command } from 'commander';
-import { serveCommand } from './commands/serve.js';
+import { serveCommand, type ServeOptions } from './commands/serve.js';
 
 const program = new Command();
 
 program
   .name('git-doc-mcp')
   .description('Turn any manifest into an MCP server')
-  .version('0.1.0');
+  .version('0.2.2');
 
 // Top-level options (allow running without 'serve' subcommand)
 program
@@ -39,7 +39,7 @@ program
   .option('--allow-http', 'Allow insecure HTTP connections (default: HTTPS-only)', false)
   .option('--trust-changed', 'Accept manifest changes on TOFU hash mismatch', false)
   .option('--rate-limit <calls-per-minute>', 'Rate limit for tool calls (0 = unlimited)', '60')
-  .action((options) => {
+  .action((options: ServeOptions) => {
     // If --manifest is provided at top level, run serve directly
     if (options.manifest) {
       return serveCommand(options);

@@ -315,9 +315,10 @@ export async function serveCommand(options: ServeOptions): Promise<void> {
         return response.content;
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
-        throw new Error(`Failed to read resource: ${message}`);
+        throw new Error(`Failed to read resource: ${message}`, { cause: error });
       }
     } : undefined,
+    // eslint-disable-next-line @typescript-eslint/require-await
     onPromptGet: manifest.prompts ? async (name, args) => {
       const prompt = manifest.prompts?.find((p) => p.name === name);
       if (!prompt) {
@@ -358,7 +359,7 @@ export async function serveCommand(options: ServeOptions): Promise<void> {
   const cleanup = async () => {
     await auditLogger.close();
   };
-  process.on('beforeExit', cleanup);
+  process.on('beforeExit', () => void cleanup());
 
   // Start server
   console.error(`Starting MCP server: ${manifest.name} v${manifest.version}`);
@@ -415,7 +416,7 @@ export function getSecretScopes(manifest: Manifest): Record<string, string[]> {
  * Substitute {{argName}} placeholders in a template string.
  */
 function substituteTemplate(template: string, args: Record<string, string>): string {
-  return template.replace(/\{\{(\w+)\}\}/g, (_match, name) => args[name] ?? `{{${name}}}`);
+  return template.replace(/\{\{(\w+)\}\}/g, (_match, name: string) => args[name] ?? `{{${name}}}`);
 }
 
 /**

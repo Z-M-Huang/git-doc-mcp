@@ -1,6 +1,6 @@
 {
   "name": "git-doc-mcp",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "Turn any manifest URL into a fully-functional MCP server",
   "keywords": [
     "mcp",
@@ -29,14 +29,23 @@
     "LICENSE"
   ],
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=20.11.0"
   },
   "scripts": {
     "build": "tsc",
     "test": "vitest run",
     "test:watch": "vitest",
+    "lint": "eslint src/",
+    "lint:fix": "eslint src/ --fix",
     "clean": "rm -rf dist",
-    "dev": "tsc --watch"
+    "dev": "tsc --watch",
+    "prepare": "simple-git-hooks"
+  },
+  "simple-git-hooks": {
+    "pre-commit": "npx lint-staged"
+  },
+  "lint-staged": {
+    "*.ts": "eslint --fix"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.0.0",
@@ -46,10 +55,15 @@
     "zod": "^3.24.0"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@types/js-yaml": "^4.0.9",
     "@types/node": "^22.0.0",
     "@vitest/coverage-v8": "^2.1.9",
+    "eslint": "^10.0.3",
+    "lint-staged": "^16.4.0",
+    "simple-git-hooks": "^2.13.1",
     "typescript": "^5.7.0",
+    "typescript-eslint": "^8.57.1",
     "vitest": "^2.0.0"
   }
 }

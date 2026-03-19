@@ -96,7 +96,7 @@ export default async function listTopics(input, ctx) {
   return {
     content: [{
       type: 'text',
-      text: `${header}\n\n${lines.join('\n\n')}\n\nUse \`get_guide\` with any slug above to read the full guide.`,
+      text: `${header}\n\n${lines.join('\n\n')}\n\n---\n**Next steps:**\n- Call \`get_guide\` with any slug above to read the full guide\n- Call \`search_docs\` with keywords to find something specific\n- Call \`get_example\` for complete working examples`,
     }],
   };
 }

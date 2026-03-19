@@ -8,7 +8,7 @@ import * as url from 'node:url';
 import * as path from 'node:path';
 import * as crypto from 'node:crypto';
 import { WorkerRequest, WorkerResponse } from './protocol.js';
-import type { AuditLogger } from '../audit/logger.js';
+import type { AuditLogger, AuditEvent } from '../audit/logger.js';
 
 // ESM-compatible __dirname
 const __filename = url.fileURLToPath(import.meta.url);
@@ -89,7 +89,7 @@ export class WorkerManager {
     // Only copy allowed environment variables
     for (const key of ALLOWED_ENV_VARS) {
       if (process.env[key] !== undefined) {
-        sanitizedEnv[key] = process.env[key] as string;
+        sanitizedEnv[key] = process.env[key]!;
       }
     }
 
@@ -156,15 +156,15 @@ export class WorkerManager {
    */
   private handleResponse(line: string): void {
     try {
-      const parsed = JSON.parse(line);
+      const parsed = JSON.parse(line) as Record<string, unknown>;
 
       // Handle audit messages from worker (forwarded via WorkerAuditProxy)
       if (parsed.type === 'audit' && parsed.event && this.options.auditLogger) {
-        this.options.auditLogger.log(parsed.event);
+        this.options.auditLogger.log(parsed.event as AuditEvent);
         return;
       }
 
-      const response = parsed as WorkerResponse;
+      const response = parsed as unknown as WorkerResponse;
       const pending = this.pendingRequests.get(response.id);
 
       if (pending) {
@@ -172,7 +172,7 @@ export class WorkerManager {
         this.pendingRequests.delete(response.id);
         pending.resolve(response);
       }
-    } catch (error) {
+    } catch {
       this.options.logger('error', `Failed to parse response: ${line}`);
     }
   }

@@ -134,5 +134,11 @@ export default async function searchDocs(input, ctx) {
     text: 'Found ' + matches.length + ' result(s) for "' + query + '":',
   });
 
+  // Append next steps
+  results.push({
+    type: 'text',
+    text: '---\n**Next steps:**\n- Call `get_guide` with a specific slug for the full guide\n- Call `get_example` to see a complete working implementation\n- Call `get_action_api` if the answer involves writing action scripts',
+  });
+
   return { content: results };
 }

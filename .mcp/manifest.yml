@@ -8,23 +8,39 @@ description: |
 
 instructions: |
   You are a documentation assistant for git-doc-mcp, a declarative MCP manifest system.
-  Use these tools to help users create their own MCP servers.
+  You MUST use the tools below to answer questions — do NOT rely on prior knowledge.
 
-  Workflow:
-  1. Start with list_topics to show the user what documentation is available.
-  2. Use get_guide to fetch specific documentation pages.
-  3. Use search_docs when the user asks a question — find relevant guides automatically.
-  4. Use get_example to show complete, working manifest and action examples.
-  5. Use get_action_api for quick reference on the ctx API (fetch, getSecret, log).
+  MANDATORY RULES:
+  - ALWAYS use at least one tool BEFORE answering any question about git-doc-mcp.
+  - NEVER answer from memory alone — the documentation is the source of truth.
+  - Use the decision tree below to pick the right tool for each situation.
 
-  When helping create a manifest:
-  - First fetch the Manifest-Reference guide for schema details
-  - Then fetch Writing-Actions for the ctx API
-  - Show relevant examples with get_example
+  DECISION TREE — match the user's intent to a tool:
 
-  When troubleshooting:
-  - Fetch the Troubleshooting guide first
-  - Then search for the specific error or issue
+  User wants to explore / "what docs exist?"
+    → call list_topics
+
+  User asks a specific question / has a keyword / error message
+    → call search_docs with relevant keywords
+
+  User asks about a known topic (and you know the slug)
+    → call get_guide with the topic slug
+
+  User says "show me an example" / wants working code
+    → call get_example (github-repo-tools, documentation-server,
+      rest-api-wrapper, multi-source-aggregator, static-knowledge-base)
+
+  User is writing an action script / asks about ctx.fetch / ctx.getSecret / ctx.log
+    → call get_action_api
+
+  User wants to create a manifest from scratch
+    → FIRST get_guide("Manifest-Reference"), THEN get_guide("Writing-Actions"),
+      THEN get_example for a similar use case
+
+  User is troubleshooting
+    → FIRST get_guide("Troubleshooting"), THEN search_docs with the error text
+
+  If unsure which tool to use → call search_docs (safest default).
 
 secrets:
   - name: GITHUB_TOKEN
@@ -41,7 +57,18 @@ tools:
       Optionally filter by tag to find specific categories.
       Available tags: quickstart, reference, actions, tools, resources, prompts,
       secrets, security, cli, best-practices, examples, troubleshooting.
-      Use this first to discover what documentation is available.
+
+      USE THIS WHEN:
+      - The user asks "what documentation is available?" or "what topics do you cover?"
+      - The user wants to browse or explore without a specific question
+      - You need to discover the correct slug before calling get_guide
+      - The conversation is just starting and the user hasn't stated a specific need
+
+      DO NOT USE WHEN:
+      - The user has a specific question (use search_docs instead)
+      - You already know the exact topic slug (use get_guide directly)
+
+      Example: "What can you help me with?" / "Show me what's available" / "List the docs"
     inputSchema:
       type: object
       properties:
@@ -49,7 +76,7 @@ tools:
           type: string
           description: "Filter topics by tag (e.g., 'reference', 'quickstart', 'security', 'examples')"
     action: https://raw.githubusercontent.com/Z-M-Huang/git-doc-mcp/main/.mcp/actions/list-topics.v1.js
-    actionHash: "sha256:79afaf18a06789239411453db8d02de4874cc83ab8a09eceb6c9b46e020caa75"
+    actionHash: "sha256:888a4a2148c8e428b93da0ea09881fbe19a55de37f723d7184613d333afdfe3d"
     annotations:
       readOnlyHint: true
       destructiveHint: false
@@ -61,9 +88,20 @@ tools:
     description: |
       Fetch a specific documentation guide by topic slug.
       Returns the full markdown content of the guide.
-      Use list_topics first to discover available topic slugs.
       Common slugs: Getting-Started, Manifest-Reference, Writing-Actions,
       Defining-Tools, Managing-Secrets, CLI-Reference, Best-Practices, Examples.
+
+      USE THIS WHEN:
+      - You know which guide the user needs (e.g., they said "manifest reference")
+      - Following up after list_topics returned a relevant slug
+      - The user asks about a broad topic that maps to one guide
+      - Building a multi-step answer (fetch Manifest-Reference, then Writing-Actions)
+
+      DO NOT USE WHEN:
+      - You don't know the right slug (use search_docs to find it first)
+      - The user's question spans multiple topics (use search_docs instead)
+
+      Example: "Show me the getting started guide" / "How do I define tools?" / "What's the manifest schema?"
     inputSchema:
       type: object
       properties:
@@ -72,7 +110,7 @@ tools:
           description: "Topic slug (e.g., 'Getting-Started', 'Manifest-Reference', 'Writing-Actions')"
       required: [topic]
     action: https://raw.githubusercontent.com/Z-M-Huang/git-doc-mcp/main/.mcp/actions/get-guide.v1.js
-    actionHash: "sha256:0b90f6f1854f4cd22b16f9c27788c6a25ae03e19cbd4bcc027536789393989d4"
+    actionHash: "sha256:55ac2acb632f5f47ac7189a03b97e8362631363024cdb43594d520184dfefbc5"
     annotations:
       readOnlyHint: true
       destructiveHint: false
@@ -85,7 +123,20 @@ tools:
       Search across all git-doc-mcp documentation by keyword.
       Finds matching topics by searching titles, descriptions, and tags,
       then fetches and returns the full content of matching pages.
-      Use this when the user asks a question and you need to find relevant guides.
+      This is the DEFAULT tool — use it when you are unsure which tool to call.
+
+      USE THIS WHEN:
+      - The user asks any specific question about git-doc-mcp
+      - The user mentions an error message or unexpected behavior
+      - You are unsure which guide contains the answer
+      - The user uses technical terms like "SSRF", "input schema", "scope pattern"
+
+      DO NOT USE WHEN:
+      - You already know the exact guide slug (use get_guide — it's faster)
+      - The user just wants to browse topics (use list_topics)
+      - The user explicitly asks for a working example (use get_example)
+
+      Example: "How do I protect against SSRF?" / "What is secret scoping?" / "Why is my action timing out?"
     inputSchema:
       type: object
       properties:
@@ -97,7 +148,7 @@ tools:
           description: "Maximum number of results to return (default: 3, max: 5)"
       required: [query]
     action: https://raw.githubusercontent.com/Z-M-Huang/git-doc-mcp/main/.mcp/actions/search-docs.v1.js
-    actionHash: "sha256:8190d80004598492ac4a0f709b00f23882ec0e7c5ae5f06c77d26ebf289a9d06"
+    actionHash: "sha256:eddbaa1b1ccf6739f63b823aa7c8a45291185cae08a11e5681626bffe763a18f"
     annotations:
       readOnlyHint: true
       destructiveHint: false
@@ -108,9 +159,20 @@ tools:
     title: Get Example
     description: |
       Fetch a specific complete working example from the Examples page.
-      Each example includes a full manifest and action scripts.
+      Each example includes a full manifest and action scripts you can copy and adapt.
       Available examples: github-repo-tools, documentation-server,
       rest-api-wrapper, multi-source-aggregator, static-knowledge-base.
+
+      USE THIS WHEN:
+      - The user says "show me an example" or "how do I build a ___?"
+      - The user wants a complete, working manifest + action scripts to copy
+      - After explaining concepts, to reinforce with a concrete example
+
+      DO NOT USE WHEN:
+      - The user asks about a concept or config detail (use get_guide or search_docs)
+      - The user needs the ctx API reference (use get_action_api)
+
+      Example: "Show me a GitHub tools example" / "I want to wrap a REST API" / "Give me a template"
     inputSchema:
       type: object
       properties:
@@ -119,7 +181,7 @@ tools:
           description: "Example name (e.g., 'github-repo-tools', 'documentation-server', 'rest-api-wrapper')"
       required: [name]
     action: https://raw.githubusercontent.com/Z-M-Huang/git-doc-mcp/main/.mcp/actions/get-example.v1.js
-    actionHash: "sha256:5d5c3328172294f79326e41b980ca262d89bdcb1b0d1af8f084e7702ddd10ab7"
+    actionHash: "sha256:8251d7a90e383b9e708c2125bc68a25afb0dc82ee88b14a213291321636f5e28"
     annotations:
       readOnlyHint: true
       destructiveHint: false
@@ -133,7 +195,18 @@ tools:
       Optionally get a specific section by matching level-2 headings.
       Available sections: ctx.fetch, ctx.getSecret, ctx.log, ctx.manifest,
       Return Format, Sandbox Constraints, Patterns, Versioning Actions.
-      Use this when helping users write action scripts.
+
+      USE THIS WHEN:
+      - The user is writing or debugging an action script
+      - The user asks about ctx.fetch, ctx.getSecret, ctx.log, or ctx.manifest
+      - The user asks about sandbox constraints, return format, or action patterns
+      - You need to verify the exact API signature before generating action code
+
+      DO NOT USE WHEN:
+      - The user asks about manifest YAML structure (use get_guide with "Manifest-Reference")
+      - The user wants a complete working example (use get_example)
+
+      Example: "How does ctx.fetch work?" / "What can I do in a sandbox?" / "How do I return data from an action?"
     inputSchema:
       type: object
       properties:
@@ -141,7 +214,7 @@ tools:
           type: string
           description: "Specific section to fetch (e.g., 'ctx.fetch', 'ctx.getSecret', 'Return Format', 'Patterns'). Omit for full reference."
     action: https://raw.githubusercontent.com/Z-M-Huang/git-doc-mcp/main/.mcp/actions/get-action-api.v1.js
-    actionHash: "sha256:65b49cb0416ea39ff069e08de8eee3fa8e20604e28c0f3aaeb06406207c6fe9e"
+    actionHash: "sha256:e25e2b63edd5a9523334b318f955c43c4ea66c749ac576031ae90d292eed4a96"
     annotations:
       readOnlyHint: true
       destructiveHint: false
@@ -233,3 +306,33 @@ prompts:
             4. Uses ctx.log for meaningful logging
             5. Returns properly formatted content
             6. Handles all error cases gracefully
+
+  - name: welcome
+    title: Welcome - Get Started
+    description: Introduction to git-doc-mcp documentation assistant and available tools
+    messages:
+      - role: user
+        content:
+          type: text
+          text: |
+            I'm exploring git-doc-mcp. Give me a brief overview of what you can help with
+            and what tools are available, then ask what I'd like to do.
+      - role: assistant
+        content:
+          type: text
+          text: |
+            I'm your git-doc-mcp documentation assistant. Here's what I can do:
+
+            **Browse documentation** — list all available topics and fetch full guides.
+            **Search** — search across all docs by keyword to find answers quickly.
+            **Show examples** — complete, working examples you can copy and adapt:
+              github-repo-tools, documentation-server, rest-api-wrapper,
+              multi-source-aggregator, static-knowledge-base.
+            **API reference** — action scripting API (ctx.fetch, ctx.getSecret, ctx.log).
+            **Create from scratch** — guided manifest and action script creation.
+
+            What would you like to do? For example:
+            - "Show me how to get started"
+            - "I want to build a manifest that wraps a REST API"
+            - "How do secrets and scoping work?"
+            - "Show me the rest-api-wrapper example"

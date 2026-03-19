@@ -24,7 +24,7 @@ vi.mock('@modelcontextprotocol/sdk/server/stdio.js', () => ({
 }));
 
 import { createMcpServer, startMcpServer, jsonSchemaToZod } from '../../server/mcp.js';
-import { z } from 'zod';
+
 
 describe('jsonSchemaToZod', () => {
   it('should convert string property', () => {

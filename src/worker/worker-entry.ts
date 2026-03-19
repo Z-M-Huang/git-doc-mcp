@@ -26,7 +26,7 @@ interface SimplifiedManifest {
  */
 export class WorkerAuditProxy implements AuditLogger {
   log(event: AuditEvent): void {
-    console.log(JSON.stringify({ type: 'audit', event }));
+    console.log(JSON.stringify({ type: 'audit', event })); // eslint-disable-line no-console
   }
 
   logFetch(url: string, status?: number, duration?: number, manifestName?: string): void {
@@ -66,7 +66,7 @@ export class WorkerAuditProxy implements AuditLogger {
  * Main worker loop.
  * Reads JSON requests from stdin, executes actions, writes responses to stdout.
  */
-async function main(): Promise<void> {
+function main(): void {
   const auditProxy = new WorkerAuditProxy();
 
   const rl = readline.createInterface({
@@ -75,7 +75,7 @@ async function main(): Promise<void> {
     terminal: false,
   });
 
-  rl.on('line', async (line: string) => {
+  rl.on('line', (line: string) => void (async () => {
     let request: WorkerRequest;
 
     try {
@@ -87,14 +87,14 @@ async function main(): Promise<void> {
 
     try {
       const response = await handleRequest(request, auditProxy);
-      console.log(JSON.stringify(response));
+      console.log(JSON.stringify(response)); // eslint-disable-line no-console
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       auditProxy.logError('Worker request failed', { error: message });
       const response: WorkerResponse = createErrorResponse(request.id, 'EXECUTION', message);
-      console.log(JSON.stringify(response));
+      console.log(JSON.stringify(response)); // eslint-disable-line no-console
     }
-  });
+  })());
 
   // Handle shutdown
   process.on('SIGTERM', () => {
@@ -165,7 +165,4 @@ export async function handleRequest(request: WorkerRequest, auditLogger?: AuditL
 }
 
 // Start worker
-main().catch((error) => {
-  console.error('Worker error:', error);
-  process.exit(1);
-});
+main();

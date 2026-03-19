@@ -3,7 +3,6 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import * as path from 'node:path';
 
 // Mock fs
 const mockAppendFile = vi.fn();

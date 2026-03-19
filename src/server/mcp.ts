@@ -196,7 +196,7 @@ function registerPrompt(
       return {
         ...(result.description ? { description: result.description } : {}),
         messages: result.messages.map((msg) => ({
-          role: msg.role as 'user' | 'assistant',
+          role: msg.role,
           content: msg.content,
         })),
       };

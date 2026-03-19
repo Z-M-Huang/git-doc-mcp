@@ -77,7 +77,8 @@ export default async function getExample(input, ctx) {
 
   log('info', 'Found example "' + name + '" (' + match.length + ' bytes)');
 
+  var nextSteps = '\n\n---\n**Next steps:**\n- Call `get_guide` with "Manifest-Reference" for full schema details\n- Call `get_action_api` for the complete ctx scripting reference\n- Call `get_example` with a different name for another example';
   return {
-    content: [{ type: 'text', text: match }],
+    content: [{ type: 'text', text: match + nextSteps }],
   };
 }
