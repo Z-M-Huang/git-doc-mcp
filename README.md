@@ -123,7 +123,7 @@ This project uses its own manifest system to serve documentation. Add it to your
 }
 ```
 
-This gives you 5 tools, 3 resources, and 2 prompts that fetch documentation from the [project wiki](https://github.com/Z-M-Huang/git-doc-mcp/wiki):
+This gives you 5 tools, 3 resources, and 3 prompts that fetch documentation from the [project wiki](https://github.com/Z-M-Huang/git-doc-mcp/wiki):
 
 | Tool | Description |
 |------|-------------|
@@ -273,6 +273,7 @@ Prompts support the full MCP `PromptMessage` format with multi-message templates
 
 - **Without `messages`**: A single user message is built from `description` + args (simple mode)
 - **With `messages`**: Messages are returned directly with `{{argName}}` substitution
+- **Embedded resources**: If a resource message omits `resource.text`, git-doc-mcp reads the URI and embeds the fetched content when the prompt is requested
 
 Each message has a `role` (`user` or `assistant`) and `content` (either `text` or embedded `resource`):
 

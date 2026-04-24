@@ -1,6 +1,6 @@
 {
   "name": "git-doc-mcp",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "description": "Turn any manifest URL into a fully-functional MCP server",
   "keywords": [
     "mcp",
@@ -21,7 +21,7 @@
     }
   },
   "bin": {
-    "git-doc-mcp": "./dist/cli/index.js"
+    "git-doc-mcp": "dist/cli/index.js"
   },
   "files": [
     "dist",

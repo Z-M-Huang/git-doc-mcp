@@ -18,6 +18,7 @@ import {
   verifyHash,
   WorkerManager,
   Manifest,
+  PromptContent,
   validateUrl,
   createAuditLogger,
   RateLimiter,
@@ -193,6 +194,33 @@ export async function serveCommand(options: ServeOptions): Promise<void> {
     });
   }
 
+  const readResourceContent = async (resourceUri: string): Promise<string> => {
+    const localPath = localResourcePaths.get(resourceUri)
+      ?? (resourceUri.startsWith('file://') ? url.fileURLToPath(resourceUri) : undefined);
+
+    if (localPath) {
+      const result = await loadLocalContent(localPath, { auditLogger });
+      return result.content;
+    }
+
+    if (!isHttpUrl(resourceUri)) {
+      if (!manifestBaseDir) {
+        throw new Error(`Local file paths require a local manifest. Cannot resolve: ${resourceUri}`);
+      }
+      const result = await loadLocalContent(resolveLocalPath(resourceUri, manifestBaseDir), { auditLogger });
+      return result.content;
+    }
+
+    const resourceSchemes = allowHttp ? ['https', 'http'] : ['https'];
+    await validateUrl(resourceUri, { allowedSchemes: resourceSchemes });
+    const response = await fetchContent(resourceUri, {
+      headers: resourceHeaders,
+      auditLogger,
+      allowHttp,
+    });
+    return response.content;
+  };
+
   // Create MCP server
   const server = createMcpServer({
     manifest: resolvedManifest,
@@ -299,26 +327,12 @@ export async function serveCommand(options: ServeOptions): Promise<void> {
       }
 
       try {
-        const localPath = localResourcePaths.get(uri);
-        if (localPath) {
-          const result = await loadLocalContent(localPath, { auditLogger });
-          return result.content;
-        }
-        // HTTP(S) resource — existing behavior
-        const resourceSchemes = allowHttp ? ['https', 'http'] : ['https'];
-        await validateUrl(resource.uri, { allowedSchemes: resourceSchemes });
-        const response = await fetchContent(resource.uri, {
-          headers: resourceHeaders,
-          auditLogger,
-          allowHttp,
-        });
-        return response.content;
+        return await readResourceContent(resource.uri);
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         throw new Error(`Failed to read resource: ${message}`, { cause: error });
       }
     } : undefined,
-    // eslint-disable-next-line @typescript-eslint/require-await
     onPromptGet: manifest.prompts ? async (name, args) => {
       const prompt = manifest.prompts?.find((p) => p.name === name);
       if (!prompt) {
@@ -329,10 +343,10 @@ export async function serveCommand(options: ServeOptions): Promise<void> {
       if (prompt.messages) {
         return {
           description: prompt.description,
-          messages: prompt.messages.map((msg) => ({
+          messages: await Promise.all(prompt.messages.map(async (msg) => ({
             role: msg.role,
-            content: substituteContent(msg.content, args ?? {}),
-          })),
+            content: await resolvePromptContent(msg.content, args ?? {}, readResourceContent),
+          }))),
         };
       }
 
@@ -423,16 +437,23 @@ function substituteTemplate(template: string, args: Record<string, string>): str
  * Substitute {{argName}} placeholders in prompt content.
  * Ensures resource.text is always present (required by MCP TextResourceContents).
  */
-function substituteContent(
-  content: { type: 'text'; text: string } | { type: 'resource'; resource: { uri: string; text?: string; mimeType?: string } },
+export async function resolvePromptContent(
+  content: PromptContent,
   args: Record<string, string>,
-): { type: 'text'; text: string } | { type: 'resource'; resource: { uri: string; text: string; mimeType?: string } } {
+  readResourceContent: (uri: string) => Promise<string>,
+): Promise<{ type: 'text'; text: string } | { type: 'resource'; resource: { uri: string; text: string; mimeType?: string } }> {
   if (content.type === 'text') {
     return { type: 'text', text: substituteTemplate(content.text, args) };
   }
+
+  const resourceUri = substituteTemplate(content.resource.uri, args);
+  const resourceText = content.resource.text !== undefined
+    ? substituteTemplate(content.resource.text, args)
+    : await readResourceContent(resourceUri);
+
   const resource: { uri: string; text: string; mimeType?: string } = {
-    uri: substituteTemplate(content.resource.uri, args),
-    text: substituteTemplate(content.resource.text ?? '', args),
+    uri: resourceUri,
+    text: resourceText,
   };
   if (content.resource.mimeType) {
     resource.mimeType = content.resource.mimeType;

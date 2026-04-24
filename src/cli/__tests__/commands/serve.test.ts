@@ -2,8 +2,8 @@
  * Unit tests for CLI serve command pure functions.
  */
 
-import { describe, it, expect } from 'vitest';
-import { parseHeaders, parseSecrets, getSecretScopes, hashPath } from '../../commands/serve.js';
+import { describe, it, expect, vi } from 'vitest';
+import { parseHeaders, parseSecrets, getSecretScopes, hashPath, resolvePromptContent } from '../../commands/serve.js';
 
 describe('parseHeaders', () => {
   it('should parse header strings', () => {
@@ -147,5 +147,83 @@ describe('hashPath', () => {
   it('should handle URLs', () => {
     const result = hashPath('https://example.com/manifest.yml');
     expect(result).toMatch(/^[0-9a-f]{16}$/);
+  });
+});
+
+describe('resolvePromptContent', () => {
+  it('should substitute text prompt content', async () => {
+    const readResourceContent = vi.fn();
+    const result = await resolvePromptContent(
+      { type: 'text', text: 'Explain {{path}}' },
+      { path: 'src/index.ts' },
+      readResourceContent
+    );
+
+    expect(result).toEqual({ type: 'text', text: 'Explain src/index.ts' });
+    expect(readResourceContent).not.toHaveBeenCalled();
+  });
+
+  it('should load missing resource text from resolved URI', async () => {
+    const readResourceContent = vi.fn().mockResolvedValue('# Loaded docs');
+    const result = await resolvePromptContent(
+      {
+        type: 'resource',
+        resource: {
+          uri: 'https://example.com/docs/{{topic}}.md',
+          mimeType: 'text/markdown',
+        },
+      },
+      { topic: 'getting-started' },
+      readResourceContent
+    );
+
+    expect(readResourceContent).toHaveBeenCalledWith('https://example.com/docs/getting-started.md');
+    expect(result).toEqual({
+      type: 'resource',
+      resource: {
+        uri: 'https://example.com/docs/getting-started.md',
+        text: '# Loaded docs',
+        mimeType: 'text/markdown',
+      },
+    });
+  });
+
+  it('should preserve explicit resource text without loading', async () => {
+    const readResourceContent = vi.fn();
+    const result = await resolvePromptContent(
+      {
+        type: 'resource',
+        resource: {
+          uri: 'https://example.com/docs/{{topic}}.md',
+          text: 'Inline {{topic}} docs',
+        },
+      },
+      { topic: 'api' },
+      readResourceContent
+    );
+
+    expect(readResourceContent).not.toHaveBeenCalled();
+    expect(result).toEqual({
+      type: 'resource',
+      resource: {
+        uri: 'https://example.com/docs/api.md',
+        text: 'Inline api docs',
+      },
+    });
+  });
+
+  it('should leave unknown placeholders intact', async () => {
+    const readResourceContent = vi.fn().mockResolvedValue('content');
+    const result = await resolvePromptContent(
+      { type: 'resource', resource: { uri: './{{missing}}.md' } },
+      {},
+      readResourceContent
+    );
+
+    expect(readResourceContent).toHaveBeenCalledWith('./{{missing}}.md');
+    expect(result).toEqual({
+      type: 'resource',
+      resource: { uri: './{{missing}}.md', text: 'content' },
+    });
   });
 });

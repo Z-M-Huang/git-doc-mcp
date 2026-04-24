@@ -24,7 +24,7 @@ const program = new Command();
 program
   .name('git-doc-mcp')
   .description('Turn any manifest into an MCP server')
-  .version('0.2.2');
+  .version('0.2.3');
 
 // Top-level options (allow running without 'serve' subcommand)
 program
